@@ -16,12 +16,6 @@ async def check(message: types.Message, state: FSMContext):
     if not user.get('treasurer'):
         return await message.answer('Вы не казначей.')
 
-    payments = db.Payments.find({
-        'region': user.get('region'),
-        'status': 'waiting'
-    })
-
-    # payments = await payments.to_list(length=await db.Payments.count_documents({}))
     payment = await db.Payments.find_one({
         'region': user.get('region'),
         'status': 'waiting'
@@ -47,8 +41,8 @@ async def generate_contribution_string_photo_markup(payment_id: ObjectId):
 
     string = f'Оплата обязательного взноса от {user.get("first_name")} {user.get("second_name")} ({user.get("mention")})\n'
     string += f"Сумма: {payment.get('amount')}\n"
-    # string += f"Дата оплаты: {payment.get('payment_date')}\n"  # todo: сделать
-    string += f"Способ оплаты: {payment.get('type')}"
+    string += f"Способ оплаты: {payment.get('type')}\n"
+    string += f"Дата платежа: {payment.get('payment_date')}"
     markup = types.InlineKeyboardMarkup()
     button_1 = types.InlineKeyboardButton(text='✅ Подтвердить платеж',
                                           callback_data=f'payment-confirm,{payment.get("_id")}')

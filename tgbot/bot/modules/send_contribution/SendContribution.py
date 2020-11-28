@@ -7,6 +7,7 @@ from datetime import datetime
 
 class Send(StatesGroup):
     payment_platform = State()
+    date = State()
     image = State()
     finish = State()
 
@@ -35,8 +36,8 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
     payment_types = region['payment_types']
 
     markup = types.InlineKeyboardMarkup()
-    for payment_type in payment_types:
-        markup.add(types.InlineKeyboardButton(text=payment_type, callback_data=payment_type))
+    for i, payment_type in enumerate(payment_types):
+        markup.add(types.InlineKeyboardButton(text=payment_type[0], callback_data=f"{payment_type[0]},{payment_type[1]}"))
 
     return markup
 
@@ -44,10 +45,25 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
 @dp.callback_query_handler(state=[Send.payment_platform])
 async def set_payment_type(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.answer()
-    payment_type = callback_query.data
+    await callback_query.message.answer(f'Реквизиты: <code>{callback_query.data.split(",")[1]}</code>')
+    payment_type = callback_query.data.split(',')[0]
     await state.update_data(payment_type=payment_type)
 
-    await callback_query.message.answer('Пришлите скриншот перевода')
+    await callback_query.message.answer('Укажите дату и время платежа в формате <code>dd.mm.yyyy HH:MM</code>')
+    await Send.date.set()
+
+
+@dp.message_handler(state=[Send.date])
+async def set_payment_date(message: types.Message, state: FSMContext):
+    date = message.text
+    try:
+        date = datetime.strptime(date, '%d.%m.%Y %H:%M')
+        await state.update_data(date=date)
+    except ValueError:
+        return await message.answer('Дата и время указаны в неправильном формате.\n\n'
+                                    'Укажите дату и время платежа в формате <code>dd.mm.yyyy HH:MM</code>')
+
+    await message.answer('Пришлите скриншот перевода')
     await Send.image.set()
 
 
@@ -62,6 +78,7 @@ async def image(message: types.Message, state: FSMContext):
         amount = 600  # todo: добавить взнос частями
         string += f'Размер взноса: {amount}\n'
         string += f'Платформа оплаты: {data.get("payment_type")}\n'
+        string += f"Дата платежа: {data.get('date')}"
 
     await message.answer_photo(file_id,
                                caption=f'Проверьте отправленные данные:\n\n{string}',
@@ -94,7 +111,8 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
             'date': int(datetime.timestamp(datetime.now())),
             'file_id': data.get('file_id'),
             'type': data.get('payment_type'),
-            'status': 'waiting'
+            'status': 'waiting',
+            'payment_date': data.get('date')
         })
         logger.info(f'Start by: {callback_query.message.from_user.id}\n'
                     f'insert_one user in db status: {result.acknowledged}')
