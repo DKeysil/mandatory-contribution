@@ -11,6 +11,9 @@ class Send(StatesGroup):
     finish = State()
 
 
+# todo: добавить дату отправки взноса
+
+
 @dp.message_handler(lambda message: message.chat.type == 'private', commands=['send'])
 async def send(message: types.Message, state: FSMContext):
     db = SingletonClient.get_data_base()
@@ -23,6 +26,7 @@ async def send(message: types.Message, state: FSMContext):
     await message.answer('Выберите платформу для оплаты', reply_markup=markup)
     await Send.payment_platform.set()
     await state.update_data(user_id=user['_id'])
+    await state.update_data(region_id=user['region'])
 
 
 async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
@@ -54,7 +58,7 @@ async def image(message: types.Message, state: FSMContext):
     db = SingletonClient.get_data_base()
     async with state.proxy() as data:
         user = await db.Users.find_one({'_id': data.get('user_id')})
-        string = f'Имя и фамилия: {user["first_name"]} {user["second_name"]}\n'
+        string = f'ФИО: {user["second_name"]} {user["first_name"]} {user["third_name"]}\n'
         amount = 600  # todo: добавить взнос частями
         string += f'Размер взноса: {amount}\n'
         string += f'Платформа оплаты: {data.get("payment_type")}\n'
@@ -89,7 +93,8 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
             'region': data.get('region_id'),
             'date': int(datetime.timestamp(datetime.now())),
             'file_id': data.get('file_id'),
-            'type': data.get('payment_type')
+            'type': data.get('payment_type'),
+            'status': 'waiting'
         })
         logger.info(f'Start by: {callback_query.message.from_user.id}\n'
                     f'insert_one user in db status: {result.acknowledged}')
