@@ -1,0 +1,8 @@
+.idea
+
+mongodb
+__pycache__
+venv
+docker-compose.creds.yml
+
+.env
