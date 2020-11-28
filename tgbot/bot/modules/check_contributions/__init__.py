@@ -1,0 +1,1 @@
+from bot.modules.check_contributions import CheckContributions
