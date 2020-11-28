@@ -95,7 +95,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
                     f'insert_one user in db status: {result.acknowledged}')
 
     await callback_query.message.edit_reply_markup()
-    await callback_query.message.answer('Вы успешно зарегистрировались.')
+    await callback_query.message.answer('Вы отправили информацию о взносе.')
     await state.finish()
 
 

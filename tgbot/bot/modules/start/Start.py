@@ -50,6 +50,8 @@ async def set_name(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(state=[Registration.region])
 async def handle_region_callback(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.answer()
+    logger.info(f'Выбор региона {callback_query.data}')
     region_id = ObjectId(callback_query.data)
     db = SingletonClient.get_data_base()
     region = await db.Regions.find_one({'_id': region_id})
@@ -63,13 +65,17 @@ async def regions_keyboard() -> types.InlineKeyboardMarkup:
     db = SingletonClient.get_data_base()
     regions = db.Regions.find({})
     regions = await regions.to_list(length=await db.Regions.count_documents({}))
+    logger.info(regions)
     lst = []
     for i in range(len(regions)):
         if i % 3 == 0:
             lst.append([types.InlineKeyboardButton(text=regions[i]['title'], callback_data=f"{regions[i]['_id']}")])
         else:
             lst[i//3].append(types.InlineKeyboardButton(text=regions[i]['title'], callback_data=f"{regions[i]['_id']}"))
-    markup = types.InlineKeyboardMarkup(lst)
+
+    markup = types.InlineKeyboardMarkup()
+    for row in lst:
+        markup.row(*row)
     return markup
 
 
@@ -100,7 +106,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
 
     async with state.proxy() as data:
         result = await db.Users.insert_one({
-            'telegram_id': data.get('telegram_id'),
+            'telegram_id': callback_query.from_user.id,
             'first_name': data.get('first_name'),
             'second_name': data.get('second_name'),
             'region': data.get('region_id'),
@@ -120,4 +126,4 @@ async def restart_callback(callback_query: types.CallbackQuery, state: FSMContex
     await callback_query.answer()
     await Registration.name.set()
     logger.info(f'Start by: {callback_query.message.from_user.id}\nrestarted')
-    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя Отчество</b>.')
+    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Имя Фамилию</b>.')
