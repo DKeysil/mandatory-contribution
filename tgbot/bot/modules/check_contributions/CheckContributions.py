@@ -38,8 +38,9 @@ async def generate_contribution_string_photo_markup(payment_id: ObjectId):
     user = await db.Users.find_one({
         '_id': payment.get('payer')
     })
+    logger.info(user)
 
-    string = f'Оплата обязательного взноса от {user.get("first_name")} {user.get("second_name")} ({user.get("mention")})\n'
+    string = f'Оплата обязательного взноса от {user.get("second_name")} {user.get("first_name")} {user.get("third_name")} ({user.get("mention")})\n'
     string += f"Сумма: {payment.get('amount')}\n"
     string += f"Способ оплаты: {payment.get('type')}\n"
     string += f"Дата платежа: {payment.get('payment_date')}"

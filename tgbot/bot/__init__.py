@@ -18,14 +18,16 @@ class BanMiddleware(BaseMiddleware):
         super(BanMiddleware, self).__init__()
 
     async def on_process_message(self, message: types.Message, data: dict):
-        db = SingletonClient.get_data_base()
-        user = await db.Users.find_one({
-            'telegram_id': message.from_user.id
-        })
-
-        if user.get('ban'):
-            await message.answer('Вы забанены')
-            raise BaseException
+        pass
+        # todo: сделать нормальный бан пользователей
+        # db = SingletonClient.get_data_base()
+        # user = await db.Users.find_one({
+        #     'telegram_id': message.from_user.id
+        # })
+        #
+        # if user.get('ban'):
+        #     await message.answer('Вы забанены')
+        #     raise BaseException
 
 
 dp.middleware.setup(BanMiddleware())
