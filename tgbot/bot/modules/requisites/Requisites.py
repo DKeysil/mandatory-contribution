@@ -6,6 +6,7 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 
 @dp.message_handler(lambda message: message.chat.type == 'private', commands=['req'])
 async def requisites(message: types.Message, state: FSMContext):
+    # todo: сделать реквизиты листабельными
     db = SingletonClient.get_data_base()
 
     user = await db.Users.find_one({'telegram_id': message.from_user.id})
@@ -22,8 +23,9 @@ async def requisites(message: types.Message, state: FSMContext):
     req = region.get('payment_types')
 
     markup = types.InlineKeyboardMarkup()
-    for i, requisite in enumerate(req):
-        markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
+    if req:
+        for i, requisite in enumerate(req):
+            markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
 
     markup.add(types.InlineKeyboardButton(text='Добавить реквизиты', callback_data='requisites,add'))
     if not req:

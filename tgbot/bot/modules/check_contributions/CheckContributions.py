@@ -2,6 +2,8 @@ from bot import dp, types, FSMContext, bot
 from motor_client import SingletonClient
 from loguru import logger
 from bson import ObjectId
+from bot import spreadsheet
+import pygsheets
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private', commands=['check'])
@@ -75,6 +77,7 @@ async def handle_payment_callback(callback_query: types.CallbackQuery):
                 'status': 'accepted'
             }
         })
+        await update_payment_in_db(user, payment_id)
 
         await bot.send_message(user.get('telegram_id'), text='👏🏻 Ваш платеж был подтвержден')
     elif callback_query.data.startswith('payment-ban'):
@@ -116,3 +119,39 @@ async def handle_payment_callback(callback_query: types.CallbackQuery):
 
     media = types.InputMediaPhoto(media=file_id, caption=string)
     await callback_query.message.edit_media(media, reply_markup=markup)
+
+
+async def update_payment_in_db(user, payment_id: ObjectId):
+    # todo: добавить цвета и авторастягивание столбцов
+    db = SingletonClient.get_data_base()
+    logger.info(f"from user {user} payment id {payment_id}")
+    region = await db.Regions.find_one({
+        '_id': user['region']
+    })
+    payment = await db.Payments.find_one({
+        '_id': payment_id
+    })
+    logger.info(f"payment: {payment} region: {region}")
+    try:
+        wks = spreadsheet.worksheet_by_title(region['title'])
+    except pygsheets.exceptions.WorksheetNotFound:
+        wks = spreadsheet.add_worksheet(region['title'])
+        wks.insert_rows(row=0, values=['id', 'ФИО', 'id платежа', 'Дата платежа', 'Сумма платежа'])
+
+    cell = wks.find(str(user['_id']))
+    if not cell:
+        fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
+        wks.append_table([
+            str(user['_id']),
+            fio,
+            str(payment['_id']),
+            str(payment['payment_date']),
+            payment['amount']
+        ], dimension='ROWS')
+    else:
+        cell = cell[0]
+        wks.update_values(crange=(cell.row, cell.col + 2),
+                          values=[[str(payment['_id'])],
+                                  [str(payment['payment_date'])],
+                                  [payment['amount']]],
+                          majordim='COLUMNS')

@@ -12,9 +12,6 @@ class Send(StatesGroup):
     finish = State()
 
 
-# todo: добавить дату отправки взноса
-
-
 @dp.message_handler(lambda message: message.chat.type == 'private', commands=['send'])
 async def send(message: types.Message, state: FSMContext):
     db = SingletonClient.get_data_base()
@@ -24,6 +21,9 @@ async def send(message: types.Message, state: FSMContext):
         return await message.answer('Вы не зарегистрированы в системе. Напишите /start')
 
     markup = await payment_types_markup(user['region'])
+    if not markup:
+        await message.answer('Казначей еще не настроил реквизиты для оплаты')
+        return await state.finish()
     await message.answer('Выберите платформу для оплаты', reply_markup=markup)
     await Send.payment_platform.set()
     await state.update_data(user_id=user['_id'])
@@ -36,6 +36,8 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
     payment_types = region['payment_types']
 
     markup = types.InlineKeyboardMarkup()
+    if not payment_types:
+        return False
     for i, payment_type in enumerate(payment_types):
         markup.add(types.InlineKeyboardButton(text=payment_type[0], callback_data=f"{payment_type[0]},{payment_type[1]}"))
 

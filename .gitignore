@@ -6,3 +6,4 @@ venv
 docker-compose.creds.yml
 
 .env
+service_account_credentials.json
