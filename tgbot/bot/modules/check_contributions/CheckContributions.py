@@ -18,16 +18,18 @@ async def check(message: types.Message, state: FSMContext):
     if not user.get('treasurer'):
         return await message.answer('Вы не казначей.')
 
-    payment = await db.Payments.find_one({
+    payment = db.Payments.find({
         'region': user.get('region'),
         'status': 'waiting'
-    })
+    }).sort('title', 1)
+    payment = await payment.to_list(length=1)
 
     logger.info(payment)
 
     if not payment:
         return await message.answer('Новых платежей не поступало')
 
+    payment = payment[0]
     file_id, string, markup = await generate_contribution_string_photo_markup(payment.get('_id'))
     await message.answer_photo(file_id, string, reply_markup=markup)
 
@@ -136,7 +138,8 @@ async def update_payment_in_db(user, payment_id: ObjectId):
         wks = spreadsheet.worksheet_by_title(region['title'])
     except pygsheets.exceptions.WorksheetNotFound:
         wks = spreadsheet.add_worksheet(region['title'])
-        wks.insert_rows(row=0, values=['id', 'ФИО', 'id платежа', 'Дата платежа', 'Сумма платежа'])
+        wks.insert_rows(row=0, values=['id', 'ФИО', 'Телеграм', 'id платежа',
+                                       'Дата платежа', 'Сумма платежа', 'Платежная система'])
 
     cell = wks.find(str(user['_id']))
     if not cell:
@@ -144,14 +147,17 @@ async def update_payment_in_db(user, payment_id: ObjectId):
         wks.append_table([
             str(user['_id']),
             fio,
+            user.get('mention'),
             str(payment['_id']),
             str(payment['payment_date']),
-            payment['amount']
+            payment['amount'],
+            payment['type']
         ], dimension='ROWS')
     else:
         cell = cell[0]
-        wks.update_values(crange=(cell.row, cell.col + 2),
+        wks.update_values(crange=(cell.row, cell.col + 3),
                           values=[[str(payment['_id'])],
                                   [str(payment['payment_date'])],
-                                  [payment['amount']]],
+                                  [payment['amount']],
+                                  [payment['type']]],
                           majordim='COLUMNS')

@@ -1,0 +1,1 @@
+from bot.modules.contibutions_list import ContributionsList
