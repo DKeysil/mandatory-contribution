@@ -2,8 +2,11 @@ from bot import dp, types, FSMContext, bot
 from motor_client import SingletonClient
 from loguru import logger
 from bson import ObjectId
-from bot import spreadsheet
-import pygsheets
+from bot import agcm
+import os
+import re
+import gspread
+from datetime import datetime
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private', commands=['check'])
@@ -134,64 +137,67 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
     # todo: добавить цвета и авторастягивание столбцов
     # todo: закрашивать красным платежи, которые были подтверждены, но потом были отклонены
     db = SingletonClient.get_data_base()
+    agc = await agcm.authorize()
+    sph = await agc.open_by_key(key=os.environ['GOOGLE_SPREADSHEET_KEY'])
     logger.info(f"from user {user} payment id {payment_id}")
     region = await db.Regions.find_one({
         '_id': user['region']
     })
+    logger.info(region)
     payment = await db.Payments.find_one({
         '_id': payment_id
     })
     logger.info(f"payment: {payment} region: {region}")
+    logger.info(sph._ws_cache_idx)
+    if not region.get('worksheet_id') and (region.get('worksheet_id') != 0):
+        wks = await sph.add_worksheet(region['title'], rows=0, cols=0)
+        logger.info(sph._ws_cache_idx)
+        await wks.append_row(values=['id', 'ФИО', 'Телеграм', 'id платежа',
+                                     'Дата платежа', 'Сумма платежа', 'Платежная система', 'Статус'])
+        await db.Regions.update_one({
+            '_id': region['_id']
+        }, {"$set": {
+            "worksheet_id": list(sph._ws_cache_idx.keys())[-1]
+        }})
+        region = await db.Regions.find_one({
+            '_id': user['region']
+        })
+    else:
+        wks = await sph.get_worksheet(region['worksheet_id'])
     try:
-        wks = spreadsheet.worksheet_by_title(region['title'])
-    except pygsheets.exceptions.WorksheetNotFound:
-        wks = spreadsheet.add_worksheet(region['title'])
-        wks.insert_rows(row=0, values=['id', 'ФИО', 'Телеграм', 'id платежа',
-                                       'Дата платежа', 'Сумма платежа', 'Платежная система'])
-
-    cell = wks.find(str(user['_id']))
+        cell = await wks.find(str(user['_id']))
+    except gspread.exceptions.CellNotFound:
+        cell = None
+    logger.info(cell)
     if not cell:
         if status == 'accept':
             fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
-            wks.append_table([
+            await wks.append_row([
                 str(user['_id']),
                 fio,
                 user.get('mention'),
                 str(payment['_id']),
                 str(payment['payment_date']),
                 payment['amount'],
-                payment['type']
-            ], dimension='ROWS')
+                payment['type'],
+                'Одобрен'
+            ], nowait=True)
     else:
-        cell = cell[0]
+        end_cell = gspread.Cell(row=cell.row, col=cell.col + 6)
+        cells = await wks.range(f"{cell.address}:{end_cell.address}")
+        cells[3].value = str(payment['_id'])
+        cells[4].value = str(payment['payment_date'])
+        cells[5].value = payment['amount']
+        cells[6].value = payment['type']
+        logger.info(cells)
         if status == 'decline':
             accepted_payment = await db.Payments.find_one({
                 'payer': payment['payer'],
                 'status': 'accepted'
             })
             if not accepted_payment:
-                wks.update_values(crange=(cell.row, cell.col + 3),
-                                  values=[[str(payment['_id'])],
-                                          [str(payment['payment_date'])],
-                                          [payment['amount']],
-                                          [payment['type']]],
-                                  majordim='COLUMNS')
-                cell1 = wks.cell((cell.row, cell.col))
-                cell2 = wks.cell((cell.row, cell.col + 6))
-                cells = wks.range(crange=f"{cell1.label}:{cell2.label}")
-                cells = cells[0]
-                for cell in cells:
-                    cell.color = (1.0, 0, 0)
+                cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Отклонен'))
+                await wks.update_cells(cells, nowait=True)
         else:
-            wks.update_values(crange=(cell.row, cell.col + 3),
-                              values=[[str(payment['_id'])],
-                                      [str(payment['payment_date'])],
-                                      [payment['amount']],
-                                      [payment['type']]],
-                              majordim='COLUMNS')
-            cell1 = wks.cell((cell.row, cell.col))
-            cell2 = wks.cell((cell.row, cell.col + 6))
-            cells = wks.range(crange=f"{cell1.label}:{cell2.label}")
-            cells = cells[0]
-            for cell in cells:
-                cell.color = (1, 1, 1)
+            cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Одобрен'))
+            await wks.update_cells(cells, nowait=True)

@@ -4,8 +4,9 @@ from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from motor_client import SingletonClient
-import pygsheets
 from aiogram.dispatcher.handler import CancelHandler
+import gspread_asyncio
+from oauth2client.service_account import ServiceAccountCredentials
 
 API_TOKEN = os.environ['BOT_API_KEY']
 
@@ -13,8 +14,21 @@ bot = Bot(token=API_TOKEN, parse_mode='html')
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-g_client = pygsheets.authorize(service_file='service_account_credentials.json')
-spreadsheet = g_client.open_by_key(os.environ['GOOGLE_SPREADSHEET_KEY'])
+
+def get_creds():
+    # To obtain a service account JSON file, follow these steps:
+    # https://gspread.readthedocs.io/en/latest/oauth2.html#for-bots-using-service-account
+    return ServiceAccountCredentials.from_json_keyfile_name(
+        "service_account_credentials.json",
+        [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/spreadsheets",
+        ],
+    )
+
+
+agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
 
 class BanMiddleware(BaseMiddleware):
