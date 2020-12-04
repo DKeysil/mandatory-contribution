@@ -62,51 +62,8 @@ async def generate_contribution_string_photo_markup(payment_id: ObjectId):
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('payment-'))
 async def handle_payment_callback(callback_query: types.CallbackQuery):
+    await handle_payment_callback_func(callback_query)
     db = SingletonClient.get_data_base()
-    payment_id = ObjectId(callback_query.data.split(',')[1])
-    payment = await db.Payments.find_one({
-        '_id': payment_id
-    })
-    user_id = payment.get('payer')
-    user = await db.Users.find_one({
-        '_id': user_id
-    })
-
-    if callback_query.data.startswith('payment-confirm'):
-        await callback_query.answer('Взнос был подтвержден')
-        result = await db.Payments.update_one({'_id': payment_id}, {
-            "$set": {
-                'status': 'accepted'
-            }
-        })
-        await update_payment_in_db(user, payment_id)
-
-        await bot.send_message(user.get('telegram_id'), text='👏🏻 Ваш платеж был подтвержден')
-    elif callback_query.data.startswith('payment-ban'):
-        await callback_query.answer('Пользователь был забанен в боте')
-        result = await db.Users.update_one({'_id': user_id}, {
-            '$set': {
-                'ban': True
-            }
-        })
-
-        result = await db.Payments.update_one({'_id': payment_id}, {
-            "$set": {
-                'status': 'declined'
-            }
-        })
-
-        await bot.send_message(user.get('telegram_id'), text='🤦🏻‍♂️ Вы были заблокированы')
-    else:
-        await callback_query.answer('Взнос был отклонен')
-        result = await db.Payments.update_one({'_id': payment_id}, {
-            "$set": {
-                'status': 'declined'
-            }
-        })
-
-        await bot.send_message(user.get('telegram_id'), text='⁉️ Ваш платеж был отменен')
-
     user = await db.Users.find_one({'telegram_id': callback_query.from_user.id})
     payment = await db.Payments.find_one({
         'region': user.get('region'),
@@ -123,8 +80,59 @@ async def handle_payment_callback(callback_query: types.CallbackQuery):
     await callback_query.message.edit_media(media, reply_markup=markup)
 
 
-async def update_payment_in_db(user, payment_id: ObjectId):
+async def handle_payment_callback_func(callback_query: types.CallbackQuery):
+    db = SingletonClient.get_data_base()
+    payment_id = ObjectId(callback_query.data.split(',')[1])
+    payment = await db.Payments.find_one({
+        '_id': payment_id
+    })
+    user_id = payment.get('payer')
+    user = await db.Users.find_one({
+        '_id': user_id
+    })
+    _type = callback_query.data.split('-')[1]
+
+    if _type.startswith('confirm'):
+        await callback_query.answer('Взнос был подтвержден')
+        result = await db.Payments.update_one({'_id': payment_id}, {
+            "$set": {
+                'status': 'accepted'
+            }
+        })
+        await update_payment_in_db(user, payment_id, status='accept')
+
+        await bot.send_message(user.get('telegram_id'), text='👏🏻 Ваш платеж был подтвержден')
+    elif _type.startswith('ban'):
+        await callback_query.answer('Пользователь был забанен в боте')
+        result = await db.Users.update_one({'_id': user_id}, {
+            '$set': {
+                'ban': True
+            }
+        })
+
+        result = await db.Payments.update_one({'_id': payment_id}, {
+            "$set": {
+                'status': 'declined'
+            }
+        })
+        await update_payment_in_db(user, payment_id, status='decline')
+
+        await bot.send_message(user.get('telegram_id'), text='🤦🏻‍♂️ Вы были заблокированы')
+    else:
+        await callback_query.answer('Взнос был отклонен')
+        result = await db.Payments.update_one({'_id': payment_id}, {
+            "$set": {
+                'status': 'declined'
+            }
+        })
+        await update_payment_in_db(user, payment_id, status='decline')
+
+        await bot.send_message(user.get('telegram_id'), text='⁉️ Ваш платеж был отменен')
+
+
+async def update_payment_in_db(user, payment_id: ObjectId, status):
     # todo: добавить цвета и авторастягивание столбцов
+    # todo: закрашивать красным платежи, которые были подтверждены, но потом были отклонены
     db = SingletonClient.get_data_base()
     logger.info(f"from user {user} payment id {payment_id}")
     region = await db.Regions.find_one({
@@ -143,21 +151,47 @@ async def update_payment_in_db(user, payment_id: ObjectId):
 
     cell = wks.find(str(user['_id']))
     if not cell:
-        fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
-        wks.append_table([
-            str(user['_id']),
-            fio,
-            user.get('mention'),
-            str(payment['_id']),
-            str(payment['payment_date']),
-            payment['amount'],
-            payment['type']
-        ], dimension='ROWS')
+        if status == 'accept':
+            fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
+            wks.append_table([
+                str(user['_id']),
+                fio,
+                user.get('mention'),
+                str(payment['_id']),
+                str(payment['payment_date']),
+                payment['amount'],
+                payment['type']
+            ], dimension='ROWS')
     else:
         cell = cell[0]
-        wks.update_values(crange=(cell.row, cell.col + 3),
-                          values=[[str(payment['_id'])],
-                                  [str(payment['payment_date'])],
-                                  [payment['amount']],
-                                  [payment['type']]],
-                          majordim='COLUMNS')
+        if status == 'decline':
+            accepted_payment = await db.Payments.find_one({
+                'payer': payment['payer'],
+                'status': 'accepted'
+            })
+            if not accepted_payment:
+                wks.update_values(crange=(cell.row, cell.col + 3),
+                                  values=[[str(payment['_id'])],
+                                          [str(payment['payment_date'])],
+                                          [payment['amount']],
+                                          [payment['type']]],
+                                  majordim='COLUMNS')
+                cell1 = wks.cell((cell.row, cell.col))
+                cell2 = wks.cell((cell.row, cell.col + 6))
+                cells = wks.range(crange=f"{cell1.label}:{cell2.label}")
+                cells = cells[0]
+                for cell in cells:
+                    cell.color = (1.0, 0, 0)
+        else:
+            wks.update_values(crange=(cell.row, cell.col + 3),
+                              values=[[str(payment['_id'])],
+                                      [str(payment['payment_date'])],
+                                      [payment['amount']],
+                                      [payment['type']]],
+                              majordim='COLUMNS')
+            cell1 = wks.cell((cell.row, cell.col))
+            cell2 = wks.cell((cell.row, cell.col + 6))
+            cells = wks.range(crange=f"{cell1.label}:{cell2.label}")
+            cells = cells[0]
+            for cell in cells:
+                cell.color = (1, 1, 1)
