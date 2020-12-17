@@ -138,7 +138,7 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
     # todo: закрашивать красным платежи, которые были подтверждены, но потом были отклонены
     db = SingletonClient.get_data_base()
     agc = await agcm.authorize()
-    sph = await agc.open_by_key(key=os.environ['GOOGLE_SPREADSHEET_KEY'])
+    # sph = await agc.open_by_key(key=os.environ['GOOGLE_SPREADSHEET_KEY'])
     logger.info(f"from user {user} payment id {payment_id}")
     region = await db.Regions.find_one({
         '_id': user['region']
@@ -148,22 +148,23 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
         '_id': payment_id
     })
     logger.info(f"payment: {payment} region: {region}")
-    logger.info(sph._ws_cache_idx)
-    if not region.get('worksheet_id') and (region.get('worksheet_id') != 0):
-        wks = await sph.add_worksheet(region['title'], rows=0, cols=0)
-        logger.info(sph._ws_cache_idx)
-        await wks.append_row(values=['id', 'ФИО', 'Телеграм', 'id платежа',
-                                     'Дата платежа', 'Сумма платежа', 'Платежная система', 'Статус'])
-        await db.Regions.update_one({
+    if not region.get('spreadsheet_key'):
+        sph = await agc.create(f'Взносы {region["title"]}')
+        result = await db.Regions.update_one({
             '_id': region['_id']
         }, {"$set": {
-            "worksheet_id": list(sph._ws_cache_idx.keys())[-1]
-        }})
-        region = await db.Regions.find_one({
-            '_id': user['region']
+            "spreadsheet_key": sph.id
+        }
         })
+        await sph.share(os.environ['MAINTAINER_EMAIL'], perm_type="user", role="writer")
+        wks = await sph.get_worksheet(0)
+        await wks.append_row(values=['id', 'ФИО', 'Телеграм', 'id платежа',
+                                     'Дата платежа', 'Сумма платежа', 'Платежная система', 'Статус'])
     else:
-        wks = await sph.get_worksheet(region['worksheet_id'])
+        sph = await agc.open_by_key(region.get('spreadsheet_key'))
+        wks = await sph.get_worksheet(0)
+
+    logger.info(sph._ws_cache_idx)
     try:
         cell = await wks.find(str(user['_id']))
     except gspread.exceptions.CellNotFound:
@@ -195,9 +196,14 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
                 'payer': payment['payer'],
                 'status': 'accepted'
             })
-            if not accepted_payment:
+            if accepted_payment:
+                cells[4].value = str(accepted_payment['payment_date'])
+                cells[5].value = accepted_payment['amount']
+                cells[6].value = accepted_payment['type']
+                cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Одобрен'))
+            else:
                 cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Отклонен'))
-                await wks.update_cells(cells, nowait=True)
+            await wks.update_cells(cells, nowait=True)
         else:
             cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Одобрен'))
             await wks.update_cells(cells, nowait=True)

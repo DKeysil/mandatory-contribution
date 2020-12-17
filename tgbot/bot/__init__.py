@@ -7,12 +7,17 @@ from motor_client import SingletonClient
 from aiogram.dispatcher.handler import CancelHandler
 import gspread_asyncio
 from oauth2client.service_account import ServiceAccountCredentials
+import asyncio
+import uvloop
+
 
 API_TOKEN = os.environ['BOT_API_KEY']
 
 bot = Bot(token=API_TOKEN, parse_mode='html')
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+loop = asyncio.new_event_loop()
 
 
 def get_creds():
@@ -51,3 +56,4 @@ class BanMiddleware(BaseMiddleware):
 dp.middleware.setup(BanMiddleware())
 
 from bot import modules
+from tasks import *
