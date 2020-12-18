@@ -9,3 +9,5 @@ from bot.modules import check_contributions
 from bot.modules import requisites
 
 from bot.modules import contibutions_list
+
+from bot.modules import get_contribution

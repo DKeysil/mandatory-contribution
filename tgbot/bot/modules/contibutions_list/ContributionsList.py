@@ -1,8 +1,7 @@
-from bot import dp, types, FSMContext
+from bot import dp, types
 from motor_client import SingletonClient
 from loguru import logger
 from bson.objectid import ObjectId
-from datetime import datetime
 from bot.modules.check_contributions.CheckContributions import handle_payment_callback_func
 
 
@@ -201,6 +200,16 @@ async def handler_payment_callback(callback_query: types.CallbackQuery):
     payment = await db.Payments.find_one({
         '_id': payment_id
     })
+    string, markup = await payment_string_markup(payment, status, page)
+    file_id = payment['file_id']
+    markup.add(types.InlineKeyboardButton(text='Вернуться', callback_data=f"conlist-back,{payment.get('_id')},{page},{status}"))
+
+    await callback_query.message.answer_photo(file_id, string, reply_markup=markup)
+    await callback_query.message.delete()
+
+
+async def payment_string_markup(payment, status, page='0'):
+    db = SingletonClient.get_data_base()
     user = await db.Users.find_one({
         '_id': payment['payer']
     })
@@ -222,10 +231,7 @@ async def handler_payment_callback(callback_query: types.CallbackQuery):
     else:
         markup.add(button_3)
     markup.add(button_2)
-    markup.add(types.InlineKeyboardButton(text='Вернуться', callback_data=f"conlist-back,{payment.get('_id')},{page},{status}"))
-
-    await callback_query.message.answer(string, reply_markup=markup)
-    await callback_query.message.delete()
+    return string, markup
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('conlist,banned'))
