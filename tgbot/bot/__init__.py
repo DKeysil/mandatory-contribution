@@ -12,12 +12,10 @@ import uvloop
 
 
 API_TOKEN = os.environ['BOT_API_KEY']
-
 bot = Bot(token=API_TOKEN, parse_mode='html')
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-loop = asyncio.new_event_loop()
+uvloop.install()
 
 
 def get_creds():
@@ -33,7 +31,7 @@ def get_creds():
     )
 
 
-agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds, loop=loop)
+agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds, loop=asyncio.get_event_loop())
 
 
 class BanMiddleware(BaseMiddleware):

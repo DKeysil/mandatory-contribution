@@ -1,11 +1,11 @@
-from bot import dp, loop
+from bot import dp
 from aiogram import executor
-import asyncio
 from loguru import logger
+import asyncio
+
 
 if __name__ == "__main__":
-    asyncio.set_event_loop(loop)
 
     logger.info('Bot is starting.')
 
-    executor.start_polling(dp, loop=loop, skip_updates=True)
+    executor.start_polling(dp, loop=asyncio.get_event_loop(), skip_updates=True)

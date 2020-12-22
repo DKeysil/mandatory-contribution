@@ -1,11 +1,12 @@
 import aiocron
-from bot import bot, loop
+from bot import bot
 from motor_client import SingletonClient
 from loguru import logger
 from bson import ObjectId
+import asyncio
 
 
-@aiocron.crontab("0 17 * * *", loop=loop)
+@aiocron.crontab("0 17 * * *")
 async def new_payments():
     logger.info('Началась рассылка о непроверенных взносах')
     db = SingletonClient.get_data_base()
