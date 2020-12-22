@@ -33,7 +33,7 @@ def get_creds():
     )
 
 
-agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
+agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds, loop=loop)
 
 
 class BanMiddleware(BaseMiddleware):

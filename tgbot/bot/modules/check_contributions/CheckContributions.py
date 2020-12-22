@@ -165,10 +165,43 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
         wks = await sph.get_worksheet(0)
 
     logger.info(sph._ws_cache_idx)
+    # Добавление или изменение клеток в первой таблице
+    await change_or_create_mandatory_cell(wks, user, payment, status, 0)
+
     try:
-        cell = await wks.find(str(user['_id']))
-    except gspread.exceptions.CellNotFound:
-        cell = None
+        wks = await sph.get_worksheet(1)
+    except AttributeError:
+        wks = await sph.add_worksheet('Заявки', 0, 0)
+
+    # Добавление или изменение клеток во второй таблице
+    await change_or_create_mandatory_cell(wks, user, payment, status, 1)
+
+
+async def change_or_create_mandatory_cell(wks, user, payment, status: str, table_id: int):
+    db = SingletonClient.get_data_base()
+
+    async def get_cell(table_id=0):
+        if table_id == 0:
+            try:
+                _cell = await wks.find(str(user['_id']))
+            except gspread.exceptions.CellNotFound:
+                _cell = None
+
+        elif table_id == 1:
+            try:
+                _cell = await wks.find(str(payment['_id']))
+                _cell = gspread.Cell(row=_cell.row, col=1)
+            except gspread.exceptions.CellNotFound:
+                _cell = None
+        if _cell:
+            _end_cell = gspread.Cell(row=_cell.row, col=_cell.col + 6)
+        else:
+            _end_cell = None
+
+        return _cell, _end_cell
+
+    cell, end_cell = await get_cell(table_id)
+
     logger.info(cell)
     if not cell:
         if status == 'accept':
@@ -182,7 +215,7 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
                 payment['amount'],
                 payment['type'],
                 'Одобрен'
-            ], nowait=True)
+            ])
     else:
         end_cell = gspread.Cell(row=cell.row, col=cell.col + 6)
         cells = await wks.range(f"{cell.address}:{end_cell.address}")
@@ -196,11 +229,14 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
                 'payer': payment['payer'],
                 'status': 'accepted'
             })
-            if accepted_payment:
-                cells[4].value = str(accepted_payment['payment_date'])
-                cells[5].value = accepted_payment['amount']
-                cells[6].value = accepted_payment['type']
-                cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Одобрен'))
+            if table_id == 0:
+                if accepted_payment:
+                    cells[4].value = str(accepted_payment['payment_date'])
+                    cells[5].value = accepted_payment['amount']
+                    cells[6].value = accepted_payment['type']
+                    cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Одобрен'))
+                else:
+                    cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Отклонен'))
             else:
                 cells.append(gspread.Cell(row=cell.row, col=cell.col + 7, value='Отклонен'))
             await wks.update_cells(cells, nowait=True)

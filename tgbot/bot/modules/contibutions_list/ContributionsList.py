@@ -23,7 +23,7 @@ async def contributions_list(message: types.Message):
 
     markup.add(types.InlineKeyboardButton(text='✅ Список одобренных платежей', callback_data='conlist,accepted,show'))
     markup.add(types.InlineKeyboardButton(text='🔥 Список отклоненных платежей', callback_data='conlist,declined,show'))
-    markup.add(types.InlineKeyboardButton(text='❌ Список забанненых пользователей', callback_data='conlist,banned,show'))
+    markup.add(types.InlineKeyboardButton(text='❌ Список забаненных пользователей', callback_data='conlist,banned,show'))
 
     await message.answer(string, reply_markup=markup)
 
