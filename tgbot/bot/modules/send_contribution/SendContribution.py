@@ -63,7 +63,9 @@ async def set_payment_date(message: types.Message, state: FSMContext):
         await state.update_data(date=date)
     except ValueError:
         return await message.answer('Дата и время указаны в неправильном формате.\n\n'
-                                    'Укажите дату и время платежа в формате <code>dd.mm.yyyy HH:MM</code>')
+                                    'Укажите дату и время платежа в формате <code>dd.mm.yyyy HH:MM</code>\n\n'
+                                    'Без нее ваш платеж может быть потерян и не учтен, '
+                                    'указывайте время отправки платежа правильно.')
 
     await message.answer('Пришлите скриншот перевода')
     await Send.image.set()
