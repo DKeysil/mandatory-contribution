@@ -231,6 +231,7 @@ async def change_or_create_mandatory_cell(wks, user, payment, status: str, table
             })
             if table_id == 0:
                 if accepted_payment:
+                    cells[3].value = str(accepted_payment['_id'])
                     cells[4].value = str(accepted_payment['payment_date'])
                     cells[5].value = accepted_payment['amount']
                     cells[6].value = accepted_payment['type']
