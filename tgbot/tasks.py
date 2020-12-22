@@ -5,7 +5,7 @@ from loguru import logger
 from bson import ObjectId
 
 
-@aiocron.crontab("0 17 * * *")
+@aiocron.crontab("0 17 * * *", loop=loop)
 async def new_payments():
     logger.info('Началась рассылка о непроверенных взносах')
     db = SingletonClient.get_data_base()
