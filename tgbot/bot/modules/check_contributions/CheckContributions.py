@@ -216,6 +216,18 @@ async def change_or_create_mandatory_cell(wks, user, payment, status: str, table
                 payment['type'],
                 'Одобрен'
             ])
+        elif status == 'decline' and table_id == 1:
+            fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
+            await wks.append_row([
+                str(user['_id']),
+                fio,
+                user.get('mention'),
+                str(payment['_id']),
+                str(payment['payment_date']),
+                payment['amount'],
+                payment['type'],
+                'Отклонен'
+            ])
     else:
         end_cell = gspread.Cell(row=cell.row, col=cell.col + 6)
         cells = await wks.range(f"{cell.address}:{end_cell.address}")
