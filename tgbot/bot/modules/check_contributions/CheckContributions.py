@@ -47,7 +47,7 @@ async def generate_contribution_string_photo_markup(payment_id: ObjectId):
     })
     logger.info(user)
 
-    string = f'Оплата обязательного взноса от {user.get("second_name")} {user.get("first_name")} {user.get("third_name")} ({user.get("mention")})\n'
+    string = f'Оплата обязательного взноса от {user.get("second_name")} {user.get("first_name")} ({user.get("mention")})\n'
     string += f"Сумма: {payment.get('amount')}\n"
     string += f"Способ оплаты: {payment.get('type')}\n"
     string += f"Дата платежа: {payment.get('payment_date')}"
@@ -205,7 +205,7 @@ async def change_or_create_mandatory_cell(wks, user, payment, status: str, table
     logger.info(cell)
     if not cell:
         if status == 'accept':
-            fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
+            fio = f"{user['second_name']} {user['first_name']}"
             await wks.append_row([
                 str(user['_id']),
                 fio,
@@ -217,7 +217,7 @@ async def change_or_create_mandatory_cell(wks, user, payment, status: str, table
                 'Одобрен'
             ])
         elif status == 'decline' and table_id == 1:
-            fio = f"{user['second_name']} {user['first_name']} {user['third_name']}"
+            fio = f"{user['second_name']} {user['first_name']}"
             await wks.append_row([
                 str(user['_id']),
                 fio,

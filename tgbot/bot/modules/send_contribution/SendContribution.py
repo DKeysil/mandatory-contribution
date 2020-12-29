@@ -78,7 +78,7 @@ async def image(message: types.Message, state: FSMContext):
     db = SingletonClient.get_data_base()
     async with state.proxy() as data:
         user = await db.Users.find_one({'_id': data.get('user_id')})
-        string = f'ФИО: {user["second_name"]} {user["first_name"]} {user["third_name"]}\n'
+        string = f'ФИО: {user["second_name"]} {user["first_name"]}\n'
         amount = 600  # todo: добавить взнос частями
         string += f'Размер взноса: {amount}\n'
         string += f'Платформа оплаты: {data.get("payment_type")}\n'

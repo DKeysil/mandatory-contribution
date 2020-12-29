@@ -43,7 +43,7 @@ async def show_list(callback_query: types.CallbackQuery):
         if not banned_users:
             return await callback_query.answer('Забаненные пользователи не найдены')
         for _user in banned_users:
-            fio = f"{_user['second_name']} {_user['first_name'][:1]}.{_user['third_name'][:1]}."
+            fio = f"{_user['second_name']} {_user['first_name'][:1]}."
             markup.add(types.InlineKeyboardButton(text=f"{_user['mention']} - {fio}",
                                                   callback_data=f"conlist,banned,{_user['_id']},0,{status}"))
         if await get_banned_list(region['_id'], 1):
@@ -58,7 +58,7 @@ async def show_list(callback_query: types.CallbackQuery):
 
         for payment in payments:
             payer = await db.Users.find_one({'_id': payment['payer']})
-            fio = f"{payer['second_name']} {payer['first_name'][:1]}.{payer['third_name'][:1]}."
+            fio = f"{payer['second_name']} {payer['first_name'][:1]}."
             markup.add(types.InlineKeyboardButton(text=f"{fio} {payment['payment_date']}", callback_data=f"conlist,payment,{payment['_id']},0,{status}"))
 
         if await get_contributions_list(region['_id'], status, 1):
@@ -119,7 +119,7 @@ async def hande_conlist_banned_callback_query_markup_generator(callback_query: t
     banned_users = await get_banned_list(region_id, page)
     markup = types.InlineKeyboardMarkup()
     for _user in banned_users:
-        fio = f"{_user['second_name']} {_user['first_name'][:1]}.{_user['third_name'][:1]}."
+        fio = f"{_user['second_name']} {_user['first_name'][:1]}."
         markup.add(types.InlineKeyboardButton(text=f"{_user['mention']} - {fio}",
                                               callback_data=f"conlist,banned,{_user['_id']},0,{status}"))
     users_l = await get_banned_list(region_id, page - 1)
@@ -159,7 +159,7 @@ async def handle_conlist_callback_query_string_markup_generator(callback_query: 
     markup = types.InlineKeyboardMarkup()
     for payment in payments:
         payer = await db.Users.find_one({'_id': payment['payer']})
-        fio = f"{payer['second_name']} {payer['first_name'][:1]}.{payer['third_name'][:1]}."
+        fio = f"{payer['second_name']} {payer['first_name'][:1]}."
         markup.add(
             types.InlineKeyboardButton(text=f"{fio} {payment['payment_date']}",
                                        callback_data=f"conlist,payment,{payment['_id']},{page},{status}"))
@@ -214,7 +214,7 @@ async def payment_string_markup(payment, status, page='0'):
         '_id': payment['payer']
     })
 
-    string = f'Оплата обязательного взноса от {user.get("second_name")} {user.get("first_name")} {user.get("third_name")} ({user.get("mention")})\n'
+    string = f'Оплата обязательного взноса от {user.get("second_name")} {user.get("first_name")} ({user.get("mention")})\n'
     string += f"Сумма: {payment.get('amount')}\n"
     string += f"Способ оплаты: {payment.get('type')}\n"
     string += f"Дата платежа: {payment.get('payment_date')}"
@@ -249,7 +249,7 @@ async def handler_banned_callback(callback_query: types.CallbackQuery):
     })
 
     string = f'Пользователь {user.get("second_name")} ' \
-             f'{user.get("first_name")} {user.get("third_name")} ({user.get("mention")})\n'
+             f'{user.get("first_name")} ({user.get("mention")})\n'
 
     button_1 = types.InlineKeyboardButton(text='🥺 Разбанить пользователя',
                                           callback_data=f'conlist-unban,{user["_id"]},{page},{status}')

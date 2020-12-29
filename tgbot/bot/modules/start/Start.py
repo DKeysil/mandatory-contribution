@@ -28,7 +28,7 @@ async def start(message: types.Message):
         logger.info(f'user exist. update_one modified count: {result.modified_count}')
         return await message.answer('Вы уже зарегистрированы')
 
-    await message.answer('Введите <b>Фамилию Имя Отчество</b>')
+    await message.answer('Введите <b>Фамилию Имя</b>')
     await Registration.name.set()
 
 
@@ -37,12 +37,11 @@ async def set_name(message: types.Message, state: FSMContext):
     name = message.text.split(' ')
     logger.info(f"Установка имени {name}")
 
-    if len(name) != 3:
-        return await message.answer('Введите <b>Фамилию Имя Отчество</b>')
+    if len(name) != 2:
+        return await message.answer('Введите <b>Фамилию Имя</b>')
 
     await state.update_data(second_name=name[0])
     await state.update_data(first_name=name[1])
-    await state.update_data(third_name=name[2])
     await state.update_data(mention=message.from_user.mention)
 
     markup = await regions_keyboard()
@@ -111,7 +110,6 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
             'telegram_id': callback_query.from_user.id,
             'first_name': data.get('first_name'),
             'second_name': data.get('second_name'),
-            'third_name': data.get('third_name'),
             'region': data.get('region_id'),
             'treasurer': False,
             'registration_date': int(datetime.timestamp(datetime.now())),
@@ -133,4 +131,4 @@ async def restart_callback(callback_query: types.CallbackQuery, state: FSMContex
     await callback_query.answer()
     await Registration.name.set()
     logger.info(f'Start by: {callback_query.message.from_user.id}\nrestarted')
-    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя Отчество</b>.')
+    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.')
