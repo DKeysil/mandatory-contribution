@@ -3,6 +3,7 @@ from motor_client import SingletonClient
 from loguru import logger
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from datetime import datetime
+from bot.modules.check_contributions.CheckContributions import update_payment_in_db
 
 
 class Send(StatesGroup):
@@ -79,7 +80,7 @@ async def image(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         user = await db.Users.find_one({'_id': data.get('user_id')})
         string = f'ФИО: {user["second_name"]} {user["first_name"]}\n'
-        amount = 600  # todo: добавить взнос частями
+        amount = 200  # todo: добавить взнос частями
         string += f'Размер взноса: {amount}\n'
         string += f'Платформа оплаты: {data.get("payment_type")}\n'
         string += f"Дата платежа: {data.get('date')}"
@@ -118,7 +119,9 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
             'status': 'waiting',
             'payment_date': data.get('date')
         })
-        logger.info(f'Start by: {callback_query.message.from_user.id}\n'
+        user = await db.Users.find_one({'_id': data.get('user_id')})
+        await update_payment_in_db(user, result.inserted_id, 'waiting')
+        logger.info(f'Send contribution by: {callback_query.message.from_user.id}\n'
                     f'insert_one user in db status: {result.acknowledged}')
 
     await callback_query.message.edit_reply_markup()
