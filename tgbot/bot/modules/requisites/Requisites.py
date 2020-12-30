@@ -108,13 +108,15 @@ async def handle_requisites_add_callback(callback_query: types.CallbackQuery, st
 async def set_title(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
 
-    await message.answer('Введите номер карты или реквизиты кошелька')
+    await message.answer('Введите номер карты или реквизиты кошелька (До 40 символов)')
 
     await AddRequisites.numbers.set()
 
 
 @dp.message_handler(state=[AddRequisites.numbers])
 async def set_numbers(message: types.Message, state: FSMContext):
+    if len(message.text) > 40:
+        return await message.answer('Должно быть короче.\nВведите номер карты или реквизиты кошелька (До 40 символов)')
     async with state.proxy() as data:
         title = data['title']
         numbers = message.text
