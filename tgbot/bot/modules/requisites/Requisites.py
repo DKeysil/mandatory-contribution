@@ -1,4 +1,4 @@
-from bot import dp, types, FSMContext
+from bot import dp, types, FSMContext, bot
 from motor_client import SingletonClient
 from loguru import logger
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -52,7 +52,7 @@ async def handle_requisites_edit_callback(callback_query: types.CallbackQuery, s
     markup.add(types.InlineKeyboardButton(text='Изменить данные', callback_data=f'requisites,change,{num}'))
     markup.add(types.InlineKeyboardButton(text='Удалить реквизиты', callback_data=f'requisites,delete,{num}'))
     await callback_query.message.answer(string, reply_markup=markup)
-    await state.update_data(mess=callback_query.message)
+    await state.update_data(mess=callback_query.message.message_id)
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,delete'))
@@ -79,8 +79,8 @@ async def handle_requisites_delete_callback(callback_query: types.CallbackQuery,
         markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
     markup.add(types.InlineKeyboardButton(text='Добавить реквизиты', callback_data='requisites,add'))
     data = await state.get_data()
-    mess: types.Message = data['mess']
-    await mess.delete()
+    mess: types.Message.message_id = data['mess']
+    await bot.delete_message(chat_id=callback_query.message.chat.id, message_id=mess)
     await callback_query.message.edit_text('Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.')
     await callback_query.message.edit_reply_markup(reply_markup=markup)
 
@@ -96,7 +96,7 @@ async def handle_requisites_add_callback(callback_query: types.CallbackQuery, st
     await callback_query.answer()
     await callback_query.message.answer('Введите название банка/кошелька')
     await AddRequisites.title.set()
-    await state.update_data(message=callback_query.message)
+    await state.update_data(message=callback_query.message.message_id)
     await state.update_data(type=callback_query.data.split(',')[1])
     try:
         await state.update_data(num=callback_query.data.split(',')[2])
@@ -120,8 +120,8 @@ async def set_numbers(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         title = data['title']
         numbers = message.text
-        mess: types.Message = data['message']
-        mess_: types.Message = data.get('mess')
+        mess: types.Message.message_id = data['message']
+        mess_: types.Message.message_id = data.get('mess')
         type_ = data['type']
         num = data.get('num')
 
@@ -149,9 +149,12 @@ async def set_numbers(message: types.Message, state: FSMContext):
     for i, requisite in enumerate(payment_types_list):
         markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
     markup.add(types.InlineKeyboardButton(text='Добавить реквизиты', callback_data='requisites,add'))
-    await mess.edit_text(
-        'Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.')
-    await mess.edit_reply_markup(reply_markup=markup)
+    await bot.edit_message_text(text='Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.', message_id=mess, chat_id=message.chat.id)
+    # await mess.edit_text(
+    #     'Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.')
+    await bot.edit_message_reply_markup(reply_markup=markup, message_id=mess, chat_id=message.chat.id)
+    # await mess.edit_reply_markup(reply_markup=markup)
     if mess_:
-        await mess_.delete()
+        await bot.delete_message(message_id=mess_, chat_id=message.chat.id)
+        # await mess_.delete()
     await state.finish()

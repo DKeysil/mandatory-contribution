@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher, types
 import os
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.dispatcher import FSMContext
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.contrib.fsm_storage.mongo import MongoStorage
 from motor_client import SingletonClient
 from aiogram.dispatcher.handler import CancelHandler
 import gspread_asyncio
@@ -13,7 +13,10 @@ import uvloop
 
 API_TOKEN = os.environ['BOT_API_KEY']
 bot = Bot(token=API_TOKEN, parse_mode='html')
-storage = MemoryStorage()
+storage = MongoStorage(host=os.environ['MONGODB_HOSTNAME'],
+                       port=os.environ['MONGODB_PORT'],
+                       username=os.environ['MONGODB_USERNAME'],
+                       password=os.environ['MONGODB_PASSWORD'])
 dp = Dispatcher(bot, storage=storage)
 uvloop.install()
 
