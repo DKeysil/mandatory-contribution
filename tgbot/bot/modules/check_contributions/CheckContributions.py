@@ -159,7 +159,7 @@ async def update_payment_in_db(user, payment_id: ObjectId, status):
         await sph.share(os.environ['MAINTAINER_EMAIL'], perm_type="user", role="writer")
 
         viewers_emails_list = os.environ['VIEWERS_EMAILS']
-        viewers_emails_list.split(',')
+        viewers_emails_list = viewers_emails_list.split(',')
         for email in viewers_emails_list:
             await sph.share(email, perm_type="user", role="reader")
 

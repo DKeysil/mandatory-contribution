@@ -111,7 +111,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
     async with state.proxy() as data:
         result = await db.Payments.insert_one({
             'payer': data.get('user_id'),
-            'amount': 600,  # Стандартно 600, потом todo: добавить взнос частями
+            'amount': 200,  # Стандартно 600, потом todo: добавить взнос частями
             'region': data.get('region_id'),
             'date': int(datetime.timestamp(datetime.now())),
             'file_id': data.get('file_id'),
