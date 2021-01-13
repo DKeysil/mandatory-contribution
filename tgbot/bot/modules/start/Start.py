@@ -45,8 +45,18 @@ async def set_name(message: types.Message, state: FSMContext):
     await state.update_data(mention=message.from_user.mention)
 
     markup = await regions_keyboard()
-    await message.answer('Выберите регион', reply_markup=markup)
+    await message.answer('Выберите регион.\n'
+                         'Если вашего региона нет, попросите казначея добавить ваш регион и '
+                         'обновите список регионов командой /refresh.', reply_markup=markup)
     await Registration.region.set()
+
+
+@dp.message_handler(commands=['refresh'], state=[Registration.region])
+async def refresh_regions_list(message: types.Message, state: FSMContext):
+    markup = await regions_keyboard()
+    await message.answer('Выберите регион.\n'
+                         'Если вашего региона нет, попросите казначея добавить ваш регион и '
+                         'обновите список регионов командой /refresh.', reply_markup=markup)
 
 
 @dp.callback_query_handler(state=[Registration.region])
