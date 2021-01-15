@@ -61,7 +61,6 @@ async def refresh_regions_list(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(state=[Registration.region])
 async def handle_region_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     logger.info(f'Выбор региона {callback_query.data}')
     region_id = ObjectId(callback_query.data)
     db = SingletonClient.get_data_base()
@@ -70,6 +69,7 @@ async def handle_region_callback(callback_query: types.CallbackQuery, state: FSM
     await state.update_data(region_id=region_id)
 
     await finish(callback_query.message, state)
+    await callback_query.answer()
 
 
 async def regions_keyboard() -> types.InlineKeyboardMarkup:
@@ -112,7 +112,6 @@ def under_event_keyboard():
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Accept', state=[Registration.finish])
 async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     db = SingletonClient.get_data_base()
 
     async with state.proxy() as data:
@@ -134,11 +133,12 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
     introduction_string += f"Для отправки взноса воспользуйтесь командой /send\nДля отмены состояния напишите /cancel"
     await callback_query.message.answer(introduction_string)
     await state.finish()
+    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Restart', state=[Registration.finish])
 async def restart_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     await Registration.name.set()
     logger.info(f'Start by: {callback_query.message.from_user.id}\nrestarted')
     await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.')
+    await callback_query.answer()

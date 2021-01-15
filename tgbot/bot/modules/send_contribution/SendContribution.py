@@ -47,13 +47,13 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
 
 @dp.callback_query_handler(state=[Send.payment_platform])
 async def set_payment_type(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     await callback_query.message.answer(f'Реквизиты: <code>{callback_query.data.split(",")[1]}</code>')
     payment_type = callback_query.data.split(',')[0]
     await state.update_data(payment_type=payment_type)
 
     await callback_query.message.answer('Укажите дату и время платежа в формате <code>dd.mm.yyyy HH:MM</code>')
     await Send.date.set()
+    await callback_query.answer()
 
 
 @dp.message_handler(state=[Send.date])
@@ -68,8 +68,8 @@ async def set_payment_date(message: types.Message, state: FSMContext):
                                     'Без нее ваш платеж может быть потерян и не учтен, '
                                     'указывайте время отправки платежа правильно.')
 
-    await message.answer('Пришлите скриншот перевода')
     await Send.image.set()
+    await message.answer('Пришлите скриншот перевода')
 
 
 @dp.message_handler(content_types=types.ContentType.PHOTO, state=[Send.image])
@@ -105,7 +105,6 @@ def under_event_keyboard():
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Accept', state=[Send.finish])
 async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     db = SingletonClient.get_data_base()
 
     async with state.proxy() as data:
@@ -127,11 +126,12 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
     await callback_query.message.edit_reply_markup()
     await callback_query.message.answer('Вы отправили информацию о взносе.')
     await state.finish()
+    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Cancel', state=[Send.finish])
 async def cancel_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     await state.finish()
     logger.info(f'Start by: {callback_query.message.from_user.id}\ncancel')
     await callback_query.message.answer('Отправка взноса была отменена')
+    await callback_query.answer()

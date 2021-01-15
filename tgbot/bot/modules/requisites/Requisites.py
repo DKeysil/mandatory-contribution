@@ -37,7 +37,6 @@ async def requisites(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,edit'))
 async def handle_requisites_edit_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     db = SingletonClient.get_data_base()
     user = await db.Users.find_one({'telegram_id': callback_query.from_user.id})
     region = await db.Regions.find_one({
@@ -53,11 +52,11 @@ async def handle_requisites_edit_callback(callback_query: types.CallbackQuery, s
     markup.add(types.InlineKeyboardButton(text='Удалить реквизиты', callback_data=f'requisites,delete,{num}'))
     await callback_query.message.answer(string, reply_markup=markup)
     await state.update_data(mess=callback_query.message.message_id)
+    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,delete'))
 async def handle_requisites_delete_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     num = int(callback_query.data.split(',')[2])
 
     db = SingletonClient.get_data_base()
@@ -83,6 +82,7 @@ async def handle_requisites_delete_callback(callback_query: types.CallbackQuery,
     await bot.delete_message(chat_id=callback_query.message.chat.id, message_id=mess)
     await callback_query.message.edit_text('Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.')
     await callback_query.message.edit_reply_markup(reply_markup=markup)
+    await callback_query.answer()
 
 
 class AddRequisites(StatesGroup):
@@ -93,15 +93,15 @@ class AddRequisites(StatesGroup):
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,add') or
                            callback_query.data.startswith('requisites,change'))
 async def handle_requisites_add_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await callback_query.answer()
     await callback_query.message.answer('Введите название банка/кошелька')
     await AddRequisites.title.set()
     await state.update_data(message=callback_query.message.message_id)
     await state.update_data(type=callback_query.data.split(',')[1])
     try:
         await state.update_data(num=callback_query.data.split(',')[2])
+        await callback_query.answer()
     except IndexError:
-        pass
+        await callback_query.answer()
 
 
 @dp.message_handler(state=[AddRequisites.title])

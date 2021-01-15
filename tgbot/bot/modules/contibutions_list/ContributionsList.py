@@ -191,7 +191,6 @@ async def handle_conlist_callback_query_string_markup_generator(callback_query: 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('conlist,payment'))
 async def handler_payment_callback(callback_query: types.CallbackQuery):
     logger.info(f'handle conlist payment from {callback_query.from_user.id} data {callback_query.data}')
-    await callback_query.answer()
     data = callback_query.data.split(',')
     page = data[3]
     status = data[4]
@@ -206,6 +205,7 @@ async def handler_payment_callback(callback_query: types.CallbackQuery):
 
     await callback_query.message.answer_photo(file_id, string, reply_markup=markup)
     await callback_query.message.delete()
+    await callback_query.answer()
 
 
 async def payment_string_markup(payment, status, page='0'):
@@ -237,7 +237,6 @@ async def payment_string_markup(payment, status, page='0'):
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('conlist,banned'))
 async def handler_banned_callback(callback_query: types.CallbackQuery):
     logger.info(f'handle conlist banned from {callback_query.from_user.id} data {callback_query.data}')
-    await callback_query.answer()
     data = callback_query.data.split(',')
     page = data[3]
     status = data[4]
@@ -259,11 +258,11 @@ async def handler_banned_callback(callback_query: types.CallbackQuery):
                                           callback_data=f"conlist-back,{user['_id']},{page},{status}"))
 
     await callback_query.message.edit_text(text=string, reply_markup=markup)
+    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('conlist-unban'))
 async def handle_conlist_unban_callback(callback_query: types.CallbackQuery):
-    await callback_query.answer()
     user_id = callback_query.data.split(',')[1]
     logger.info(f"unban user {user_id}")
     db = SingletonClient.get_data_base()
@@ -275,11 +274,11 @@ async def handle_conlist_unban_callback(callback_query: types.CallbackQuery):
     string = 'Выберите пользователя для работы с ним'
     markup = await hande_conlist_banned_callback_query_markup_generator(callback_query)
     _message = await callback_query.message.edit_text(text=string, reply_markup=markup)
+    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('conlist-'))
 async def handle_conlist_callback(callback_query: types.CallbackQuery):
-    await callback_query.answer()
     if not callback_query.data.startswith('conlist-back'):
         await handle_payment_callback_func(callback_query)
 
@@ -293,6 +292,7 @@ async def handle_conlist_callback(callback_query: types.CallbackQuery):
         markup = await handle_conlist_callback_query_string_markup_generator(callback_query)
         await callback_query.message.answer(string, reply_markup=markup)
         await callback_query.message.delete()
+    await callback_query.answer()
 
 
 async def get_contributions_list(region_id, status, page):

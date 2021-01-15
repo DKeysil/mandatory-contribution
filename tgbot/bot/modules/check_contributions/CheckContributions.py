@@ -96,7 +96,6 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
     _type = callback_query.data.split('-')[1]
 
     if _type.startswith('confirm'):
-        await callback_query.answer('Взнос был подтвержден')
         result = await db.Payments.update_one({'_id': payment_id}, {
             "$set": {
                 'status': 'accepted'
@@ -105,8 +104,8 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         await update_payment_in_db(user, payment_id, status='accept')
 
         await bot.send_message(user.get('telegram_id'), text='👏🏻 Ваш платеж был подтвержден')
+        await callback_query.answer('Взнос был подтвержден')
     elif _type.startswith('ban'):
-        await callback_query.answer('Пользователь был забанен в боте')
         result = await db.Users.update_one({'_id': user_id}, {
             '$set': {
                 'ban': True
@@ -121,8 +120,8 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         await update_payment_in_db(user, payment_id, status='decline')
 
         await bot.send_message(user.get('telegram_id'), text='🤦🏻‍♂️ Вы были заблокированы')
+        await callback_query.answer('Пользователь был забанен в боте')
     else:
-        await callback_query.answer('Взнос был отклонен')
         result = await db.Payments.update_one({'_id': payment_id}, {
             "$set": {
                 'status': 'declined'
@@ -131,6 +130,7 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         await update_payment_in_db(user, payment_id, status='decline')
 
         await bot.send_message(user.get('telegram_id'), text='⁉️ Ваш платеж был отменен')
+        await callback_query.answer('Взнос был отклонен')
 
 
 async def update_payment_in_db(user, payment_id: ObjectId, status):
