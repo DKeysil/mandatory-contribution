@@ -210,42 +210,26 @@ async def change_or_create_mandatory_cell(wks, user, payment, status: str, table
 
     logger.info(cell)
     if not cell:
+        fio = f"{user['second_name']} {user['first_name']}"
+        wks_row = [
+                str(user['_id']),
+                fio,
+                user.get('mention'),
+                str(payment['_id']),
+                str(payment['payment_date']),
+                payment['amount'],
+                payment['type']
+        ]
         if status == 'accept':
-            fio = f"{user['second_name']} {user['first_name']}"
-            await wks.append_row([
-                str(user['_id']),
-                fio,
-                user.get('mention'),
-                str(payment['_id']),
-                str(payment['payment_date']),
-                payment['amount'],
-                payment['type'],
-                'Одобрен'
-            ])
+            wks_row.append('Одобрен')
         elif status == 'decline' and table_id == 1:
-            fio = f"{user['second_name']} {user['first_name']}"
-            await wks.append_row([
-                str(user['_id']),
-                fio,
-                user.get('mention'),
-                str(payment['_id']),
-                str(payment['payment_date']),
-                payment['amount'],
-                payment['type'],
-                'Отклонен'
-            ])
+            wks_row.append('Отклонен')
         elif status == 'waiting' and table_id == 1:
-            fio = f"{user['second_name']} {user['first_name']}"
-            await wks.append_row([
-                str(user['_id']),
-                fio,
-                user.get('mention'),
-                str(payment['_id']),
-                str(payment['payment_date']),
-                payment['amount'],
-                payment['type'],
-                'Ожидает'
-            ])
+            wks_row.append('Ожидает')
+        if user.get('federal_region'):
+            wks_row.append(user.get('federal_region'))
+        if status == 'accept' or (status in ['decline', 'waiting'] and table_id == 1):
+            await wks.append_row(wks_row)
     else:
         end_cell = gspread.Cell(row=cell.row, col=cell.col + 6)
         cells = await wks.range(f"{cell.address}:{end_cell.address}")

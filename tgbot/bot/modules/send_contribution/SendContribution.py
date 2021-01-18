@@ -37,6 +37,7 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
     payment_types = region['payment_types']
 
     markup = types.InlineKeyboardMarkup()
+    logger.error(payment_types)
     if not payment_types:
         return False
     for i, payment_type in enumerate(payment_types):

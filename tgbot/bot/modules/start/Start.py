@@ -9,6 +9,7 @@ from bson import ObjectId
 class Registration(StatesGroup):
     name = State()
     region = State()
+    federal_region = State()
     finish = State()
 
 
@@ -68,7 +69,54 @@ async def handle_region_callback(callback_query: types.CallbackQuery, state: FSM
     await state.update_data(region_title=region['title'])
     await state.update_data(region_id=region_id)
 
+    if region.get("title") == "Федеральный регион":
+        await callback_query.message.answer("Пришлите название вашего региона")
+        await Registration.federal_region.set()
+        return await callback_query.answer()
+
     await finish(callback_query.message, state)
+    await callback_query.answer()
+
+
+@dp.message_handler(state=[Registration.federal_region])
+async def set_federal_region(message: types.Message, state: FSMContext):
+    await state.update_data(federal_region=message.text)
+    await message.reply("Принято")
+    await finish(message, state)
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'Accept', state=[Registration.finish])
+async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext):
+    db = SingletonClient.get_data_base()
+
+    async with state.proxy() as data:
+        result = await db.Users.insert_one({
+            'telegram_id': callback_query.from_user.id,
+            'first_name': data.get('first_name'),
+            'second_name': data.get('second_name'),
+            'region': data.get('region_id'),
+            'federal_region': data.get('federal_region'),
+            'treasurer': False,
+            'registration_date': int(datetime.timestamp(datetime.now())),
+            'mention': data.get('mention'),
+            'ban': False
+        })
+        logger.info(f'Start by: {callback_query.message.from_user.id}\n'
+                    f'insert_one user in db status: {result.acknowledged}')
+
+    await callback_query.message.edit_reply_markup()
+    introduction_string = 'Вы успешно зарегистрировались.\n\n'
+    introduction_string += f"Для отправки взноса воспользуйтесь командой /send\nДля отмены состояния напишите /cancel"
+    await callback_query.message.answer(introduction_string)
+    await state.finish()
+    await callback_query.answer()
+
+
+@dp.callback_query_handler(lambda callback_query: callback_query.data == 'Restart', state=[Registration.finish])
+async def restart_callback(callback_query: types.CallbackQuery, state: FSMContext):
+    await Registration.name.set()
+    logger.info(f'Start by: {callback_query.message.from_user.id}\nrestarted')
+    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.')
     await callback_query.answer()
 
 
@@ -95,6 +143,8 @@ async def finish(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         string += f"Имя Фамилия: {data.get('first_name')} {data.get('second_name')}\n"
         string += f'Регион: {data.get("region_title")}\n'
+        if data.get("federal_region"):
+            string += f"Уточненный регион: {data.get('federal_region')}"
     await Registration.finish.set()
     await message.answer(string, reply_markup=under_event_keyboard())
 
@@ -108,37 +158,3 @@ def under_event_keyboard():
     button = types.InlineKeyboardButton(text="❌ Начать заново", callback_data='Restart')
     markup.add(button)
     return markup
-
-
-@dp.callback_query_handler(lambda callback_query: callback_query.data == 'Accept', state=[Registration.finish])
-async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    db = SingletonClient.get_data_base()
-
-    async with state.proxy() as data:
-        result = await db.Users.insert_one({
-            'telegram_id': callback_query.from_user.id,
-            'first_name': data.get('first_name'),
-            'second_name': data.get('second_name'),
-            'region': data.get('region_id'),
-            'treasurer': False,
-            'registration_date': int(datetime.timestamp(datetime.now())),
-            'mention': data.get('mention'),
-            'ban': False
-        })
-        logger.info(f'Start by: {callback_query.message.from_user.id}\n'
-                    f'insert_one user in db status: {result.acknowledged}')
-
-    await callback_query.message.edit_reply_markup()
-    introduction_string = 'Вы успешно зарегистрировались.\n\n'
-    introduction_string += f"Для отправки взноса воспользуйтесь командой /send\nДля отмены состояния напишите /cancel"
-    await callback_query.message.answer(introduction_string)
-    await state.finish()
-    await callback_query.answer()
-
-
-@dp.callback_query_handler(lambda callback_query: callback_query.data == 'Restart', state=[Registration.finish])
-async def restart_callback(callback_query: types.CallbackQuery, state: FSMContext):
-    await Registration.name.set()
-    logger.info(f'Start by: {callback_query.message.from_user.id}\nrestarted')
-    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.')
-    await callback_query.answer()
