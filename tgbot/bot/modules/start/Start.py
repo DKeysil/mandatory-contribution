@@ -22,7 +22,6 @@ async def start(message: types.Message):
     user = await db.Users.find_one({
         "telegram_id": telegram_id
     })
-    telegram_name = message.from_user.full_name
 
     if user:
         result = await db.Users.update_one({"telegram_id": telegram_id}, {"$set": {"mention": message.from_user.mention}})
@@ -80,6 +79,7 @@ async def handle_region_callback(callback_query: types.CallbackQuery, state: FSM
 
 @dp.message_handler(state=[Registration.federal_region])
 async def set_federal_region(message: types.Message, state: FSMContext):
+    logger.info(f"from {message.from_user.id} federal region {message.text}")
     await state.update_data(federal_region=message.text)
     await message.reply("Принято")
     await finish(message, state)
@@ -88,6 +88,7 @@ async def set_federal_region(message: types.Message, state: FSMContext):
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Accept', state=[Registration.finish])
 async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext):
     db = SingletonClient.get_data_base()
+    logger.info(f"from {callback_query.from_user.id}")
 
     async with state.proxy() as data:
         result = await db.Users.insert_one({
@@ -139,9 +140,10 @@ async def regions_keyboard() -> types.InlineKeyboardMarkup:
 
 
 async def finish(message: types.Message, state: FSMContext):
+    logger.info(f"from {message.from_user.id}")
     string = 'Проверьте введённые данные:\n\n'
     async with state.proxy() as data:
-        string += f"Имя Фамилия: {data.get('first_name')} {data.get('second_name')}\n"
+        string += f"ФИ: {data.get('second_name')} {data.get('first_name')}\n"
         string += f'Регион: {data.get("region_title")}\n'
         if data.get("federal_region"):
             string += f"Уточненный регион: {data.get('federal_region')}"

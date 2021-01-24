@@ -42,15 +42,19 @@ async def generate_contribution_string_photo_markup(payment_id: ObjectId):
     payment = await db.Payments.find_one({
         '_id': payment_id
     })
-    user = await db.Users.find_one({
-        '_id': payment.get('payer')
-    })
+    logger.info(type(payment.get('payer')))
+    if type(payment.get('payer')) == ObjectId:
+        user = await db.Users.find_one({
+            '_id': payment.get('payer')
+        })
+    else:
+        user: dict = payment.get('payer')
     logger.info(user)
 
     string = f'Оплата обязательного взноса от {user.get("second_name")} {user.get("first_name")} ({user.get("mention")})\n'
     string += f"Сумма: {payment.get('amount')}\n"
     string += f"Способ оплаты: {payment.get('type')}\n"
-    string += f"Дата платежа: {payment.get('payment_date')}"
+    string += f"Дата платежа: {payment.get('payment_date').strftime('%d.%m.%Y %H:%M')}"
     markup = types.InlineKeyboardMarkup()
     button_1 = types.InlineKeyboardButton(text='✅ Подтвердить платеж',
                                           callback_data=f'payment-confirm,{payment.get("_id")}')
@@ -94,7 +98,13 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         '_id': user_id
     })
     _type = callback_query.data.split('-')[1]
-
+    if payer := user.get("payer"):
+        payer = await db.Users.find_one({
+            "_id": payer
+        })
+        telegram_id = payer.get("telegram_id")
+    else:
+        telegram_id = user.get('telegram_id')
     if _type.startswith('confirm'):
         result = await db.Payments.update_one({'_id': payment_id}, {
             "$set": {
@@ -103,9 +113,13 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         })
         await update_payment_in_db(user, payment_id, status='accept')
 
-        await bot.send_message(user.get('telegram_id'), text='👏🏻 Ваш платеж был подтвержден')
+        await bot.send_message(telegram_id, text=f'👏🏻 Ваш платеж, который был отправлен '
+                                                 f'{payment.get("payment_date").strftime("%d.%m.%Y %H:%M")},'
+                                                 f' подтвержден')
         await callback_query.answer('Взнос был подтвержден')
     elif _type.startswith('ban'):
+        if payer := user.get("payer"):
+            user_id = payer
         result = await db.Users.update_one({'_id': user_id}, {
             '$set': {
                 'ban': True
@@ -119,7 +133,7 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         })
         await update_payment_in_db(user, payment_id, status='decline')
 
-        await bot.send_message(user.get('telegram_id'), text='🤦🏻‍♂️ Вы были заблокированы')
+        await bot.send_message(telegram_id, text='🤦🏻‍♂️ Вы были заблокированы')
         await callback_query.answer('Пользователь был забанен в боте')
     else:
         result = await db.Payments.update_one({'_id': payment_id}, {
@@ -129,7 +143,8 @@ async def handle_payment_callback_func(callback_query: types.CallbackQuery):
         })
         await update_payment_in_db(user, payment_id, status='decline')
 
-        await bot.send_message(user.get('telegram_id'), text='⁉️ Ваш платеж был отменен')
+        await bot.send_message(telegram_id, text='⁉️ Ваш платеж, который был отправлен'
+                                                 f' {payment.get("payment_date").strftime("%d.%m.%Y %H:%M")}, отменен')
         await callback_query.answer('Взнос был отклонен')
 
 
