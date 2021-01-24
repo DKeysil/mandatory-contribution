@@ -208,7 +208,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
         if data.get("person") == "self":
             logger.info("self")
             user = await db.Users.find_one({'_id': data.get('user_id')})
-            user_id = user.get("telegram_id")
+            user_id = user.get("_id")
         else:
             logger.info("another")
             dct = {
