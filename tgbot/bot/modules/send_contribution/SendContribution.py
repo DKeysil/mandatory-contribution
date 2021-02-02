@@ -35,6 +35,7 @@ async def send(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('send'), state=[Send.choose_person])
 async def set_person(callback_query: types.CallbackQuery, state: FSMContext):
+    await callback_query.message.edit_reply_markup()
     logger.info(f"from {callback_query.from_user.id}")
     db = SingletonClient.get_data_base()
     user = await db.Users.find_one({'telegram_id': callback_query.from_user.id})
@@ -123,16 +124,16 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
     if not payment_types:
         return False
     for i, payment_type in enumerate(payment_types):
-        markup.add(types.InlineKeyboardButton(text=payment_type[0], callback_data=f"{payment_type[0]},{payment_type[1]}"))
+        markup.add(types.InlineKeyboardButton(text=payment_type[0], callback_data=f"rq,{payment_type[0]},{payment_type[1]}"))
 
     return markup
 
 
-@dp.callback_query_handler(state=[Send.payment_platform])
+@dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('rq'), state=[Send.payment_platform])
 async def set_payment_type(callback_query: types.CallbackQuery, state: FSMContext):
     logger.info(f"from {callback_query.from_user.id}")
-    await callback_query.message.answer(f'Реквизиты: <code>{callback_query.data.split(",")[1]}</code>')
-    payment_type = callback_query.data.split(',')[0]
+    await callback_query.message.answer(f'Реквизиты: <code>{callback_query.data.split(",")[2]}</code>')
+    payment_type = callback_query.data.split(',')[1]
     await state.update_data(payment_type=payment_type)
 
     await callback_query.message.answer('Укажите дату и время платежа в формате <code>dd.mm.yyyy HH:MM</code>')
