@@ -206,6 +206,13 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
     db = SingletonClient.get_data_base()
 
     async with state.proxy() as data:
+        if await db.Payments.find_one({'file_id': data.get('file_id'),
+                                       'region': data.get('region_id'),
+                                       'payment_date': data.get('date')}):
+            await callback_query.message.edit_reply_markup()
+            await callback_query.message.answer('Вы отправили информацию о взносе.')
+            await state.finish()
+            return await callback_query.answer('Ваш платеж уже учтен')
         if data.get("person") == "self":
             logger.info("self")
             user = await db.Users.find_one({'_id': data.get('user_id')})
@@ -243,7 +250,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
         })
 
         await update_payment_in_db(user, result.inserted_id, 'waiting')
-        logger.info(f'Send contribution by: {callback_query.message.from_user.id}\n'
+        logger.info(f'Send contribution by: {callback_query.from_user.id}\n'
                     f'insert_one user in db status: {result.acknowledged}')
 
     await callback_query.message.edit_reply_markup()
@@ -255,6 +262,6 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Cancel', state=[Send.finish])
 async def cancel_callback(callback_query: types.CallbackQuery, state: FSMContext):
     await state.finish()
-    logger.info(f'Start by: {callback_query.message.from_user.id}\ncancel')
+    logger.info(f'Start by: {callback_query.from_user.id}\ncancel')
     await callback_query.message.answer('Отправка взноса была отменена')
     await callback_query.answer()

@@ -102,7 +102,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
             'mention': data.get('mention'),
             'ban': False
         })
-        logger.info(f'Start by: {callback_query.message.from_user.id}\n'
+        logger.info(f'Start by: {callback_query.from_user.id}\n'
                     f'insert_one user in db status: {result.acknowledged}')
 
     await callback_query.message.edit_reply_markup()
@@ -116,7 +116,7 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
 @dp.callback_query_handler(lambda callback_query: callback_query.data == 'Restart', state=[Registration.finish])
 async def restart_callback(callback_query: types.CallbackQuery, state: FSMContext):
     await Registration.name.set()
-    logger.info(f'Start by: {callback_query.message.from_user.id}\nrestarted')
+    logger.info(f'Start by: {callback_query.from_user.id}\nrestarted')
     await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.')
     await callback_query.answer()
 
