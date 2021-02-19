@@ -158,6 +158,12 @@ async def set_payment_date(message: types.Message, state: FSMContext):
     await message.answer('Пришлите скриншот перевода')
 
 
+@dp.message_handler(content_types=types.ContentType.DOCUMENT, state=[Send.image])
+async def image(message: types.Message, state: FSMContext):
+    await message.reply("Необходимо прислать сжатое фото. "
+                        "При отправлении фото нажмите галочку \"Сжать фото\" (Compress images)")
+
+
 @dp.message_handler(content_types=types.ContentType.PHOTO, state=[Send.image])
 async def image(message: types.Message, state: FSMContext):
     file_id = message.photo[0].file_id  # file id фотографии
