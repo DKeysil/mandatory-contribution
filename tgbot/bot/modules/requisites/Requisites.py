@@ -115,8 +115,6 @@ async def set_title(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=[AddRequisites.numbers])
 async def set_numbers(message: types.Message, state: FSMContext):
-    if len(message.text) > 40 or len(message.text.encode('utf-8')) > 64:
-        return await message.answer('Должно быть короче.')
     async with state.proxy() as data:
         title = data['title']
         numbers = message.text
@@ -124,6 +122,9 @@ async def set_numbers(message: types.Message, state: FSMContext):
         mess_: types.Message.message_id = data.get('mess')
         type_ = data['type']
         num = data.get('num')
+    st = len(('rq,' + title + message.text).encode('utf-8'))
+    if st > 64:
+        return await message.answer('Должно быть короче.')
 
     db = SingletonClient.get_data_base()
     user = await db.Users.find_one({
