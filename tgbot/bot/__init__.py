@@ -59,3 +59,7 @@ class BanMiddleware(BaseMiddleware):
 
 
 dp.middleware.setup(BanMiddleware())
+
+
+from bot import modules
+from tasks import *
