@@ -1,19 +1,26 @@
-from bot import dp, types
-from motor_client import SingletonClient
-from loguru import logger
-from bson.objectid import ObjectId
+from aiogram import types
+from bson import ObjectId
 from bson.errors import InvalidId
-from bot.modules.contibutions_list.ContributionsList import payment_string_markup
+from loguru import logger
+
+from bot import dp
+from bot.modules.contibutions_list.ContributionsList import (
+    payment_string_markup
+)
+from motor_client import SingletonClient
 
 
-@dp.message_handler(lambda message: message.chat.type == 'private', commands=['get'])
+@dp.message_handler(lambda message: message.chat.type == 'private',
+                    commands=['get'])
 async def get_contribution(message: types.Message):
     logger.info(f'get contribution from {message.from_user.id}')
     db = SingletonClient.get_data_base()
 
     user = await db.Users.find_one({'telegram_id': message.from_user.id})
     if not user:
-        return await message.answer('Вы не зарегистрированы в системе. Напишите /start')
+        return await message.answer(
+            'Вы не зарегистрированы в системе. Напишите /start'
+        )
 
     if not user.get('treasurer'):
         return await message.answer('Вы не казначей.')
@@ -34,8 +41,13 @@ async def get_contribution(message: types.Message):
     if not payment:
         return await message.answer('Платеж не найден')
 
-    string, markup = await payment_string_markup(payment, status=payment['status'])
-    markup.add(types.InlineKeyboardButton(text='Список платежей', callback_data=f"conlist-back,{payment.get('_id')},0,{payment['status']}"))
+    string, markup = await payment_string_markup(payment,
+                                                 status=payment['status'])
+    markup.add(types.InlineKeyboardButton(
+        text='Список платежей',
+        callback_data=(f"conlist-back,{payment.get('_id')},"
+                       f"0,{payment['status']}")
+    ))
     file_id = payment['file_id']
 
     await message.answer_photo(file_id, string, reply_markup=markup)

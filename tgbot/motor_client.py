@@ -1,5 +1,6 @@
-import motor.motor_asyncio as m_m_a
 import os
+
+import motor.motor_asyncio as mma
 
 
 class SingletonClient:
@@ -14,8 +15,13 @@ class SingletonClient:
             MONGODB_HOSTNAME = os.environ['MONGODB_HOSTNAME']
             MONGODB_PORT = os.environ['MONGODB_PORT']
 
-            SingletonClient.client = m_m_a.AsyncIOMotorClient("mongodb://{}:{}@{}:{}".format(
-                MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_HOSTNAME, str(MONGODB_PORT)))
+            SingletonClient.client = mma.AsyncIOMotorClient(
+                "mongodb://{}:{}@{}:{}".format(MONGODB_USERNAME,
+                                               MONGODB_PASSWORD,
+                                               MONGODB_HOSTNAME,
+                                               str(MONGODB_PORT)
+                                               )
+            )
 
         return SingletonClient.client
 

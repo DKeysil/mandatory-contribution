@@ -1,14 +1,15 @@
-from aiogram import Bot, Dispatcher, types
-import os
-from aiogram.dispatcher.middlewares import BaseMiddleware
-from aiogram.dispatcher import FSMContext
-from aiogram.contrib.fsm_storage.mongo import MongoStorage
-from motor_client import SingletonClient
-from aiogram.dispatcher.handler import CancelHandler
-import gspread_asyncio
-from oauth2client.service_account import ServiceAccountCredentials
 import asyncio
+import os
+
+import gspread_asyncio
 import uvloop
+from aiogram import Bot, Dispatcher, types
+from aiogram.contrib.fsm_storage.mongo import MongoStorage
+from aiogram.dispatcher.handler import CancelHandler
+from aiogram.dispatcher.middlewares import BaseMiddleware
+from oauth2client.service_account import ServiceAccountCredentials
+
+from motor_client import SingletonClient
 
 
 API_TOKEN = os.environ['BOT_API_KEY']
@@ -23,7 +24,8 @@ uvloop.install()
 
 def get_creds():
     # To obtain a service account JSON file, follow these steps:
-    # https://gspread.readthedocs.io/en/latest/oauth2.html#for-bots-using-service-account
+    # https://gspread.readthedocs.io/en/latest/oauth2.html
+    # for-bots-using-service-account
     return ServiceAccountCredentials.from_json_keyfile_name(
         "service_account_credentials.json",
         [
@@ -34,7 +36,9 @@ def get_creds():
     )
 
 
-agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds, loop=asyncio.get_event_loop())
+agcm = gspread_asyncio.AsyncioGspreadClientManager(
+    get_creds, loop=asyncio.get_event_loop()
+)
 
 
 class BanMiddleware(BaseMiddleware):
@@ -55,6 +59,3 @@ class BanMiddleware(BaseMiddleware):
 
 
 dp.middleware.setup(BanMiddleware())
-
-from bot import modules
-from tasks import *
