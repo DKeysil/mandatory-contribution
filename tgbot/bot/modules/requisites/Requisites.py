@@ -1,17 +1,22 @@
-from bot import dp, types, FSMContext, bot
-from motor_client import SingletonClient
-from loguru import logger
+from aiogram import types
+from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
+from bot import bot, dp
+from motor_client import SingletonClient
 
-@dp.message_handler(lambda message: message.chat.type == 'private', commands=['req'])
+
+@dp.message_handler(lambda message: message.chat.type == 'private',
+                    commands=['req'])
 async def requisites(message: types.Message, state: FSMContext):
     # todo: сделать реквизиты листабельными
     db = SingletonClient.get_data_base()
 
     user = await db.Users.find_one({'telegram_id': message.from_user.id})
     if not user:
-        return await message.answer('Вы не зарегистрированы в системе. Напишите /start')
+        return await message.answer(
+            'Вы не зарегистрированы в системе. Напишите /start'
+        )
 
     if not user.get('treasurer'):
         return await message.answer('Вы не казначей.')
@@ -25,20 +30,35 @@ async def requisites(message: types.Message, state: FSMContext):
     markup = types.InlineKeyboardMarkup()
     if req:
         for i, requisite in enumerate(req):
-            markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
+            markup.add(types.InlineKeyboardButton(
+                text=f"{requisite[0]}",
+                callback_data=f'requisites,edit,{i}'
+            ))
 
-    markup.add(types.InlineKeyboardButton(text='Добавить реквизиты', callback_data='requisites,add'))
+    markup.add(types.InlineKeyboardButton(text='Добавить реквизиты',
+                                          callback_data='requisites,add'))
     if not req:
-        return await message.answer('Реквизиты не найдены, но вы можете их добавить', reply_markup=markup)
+        return await message.answer(
+            'Реквизиты не найдены, но вы можете их добавить',
+            reply_markup=markup
+        )
 
-    await message.answer('Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.',
-                         reply_markup=markup)
+    await message.answer(
+        ('Список реквизитов.'
+         '\nВы можете изменить или удалить существующие или добавить новые.'),
+        reply_markup=markup
+    )
 
 
-@dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,edit'))
-async def handle_requisites_edit_callback(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data.startswith('requisites,edit')
+)
+async def handle_requisites_edit_callback(callback_query: types.CallbackQuery,
+                                          state: FSMContext):
     db = SingletonClient.get_data_base()
-    user = await db.Users.find_one({'telegram_id': callback_query.from_user.id})
+    user = await db.Users.find_one(
+        {'telegram_id': callback_query.from_user.id}
+    )
     region = await db.Regions.find_one({
         '_id': user.get('region')
     })
@@ -48,15 +68,23 @@ async def handle_requisites_edit_callback(callback_query: types.CallbackQuery, s
     requisite = req[int(num)]
     string = f"<b>Название:</b> {requisite[0]}\n<b>Данные:</b> {requisite[1]}"
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(text='Изменить данные', callback_data=f'requisites,change,{num}'))
-    markup.add(types.InlineKeyboardButton(text='Удалить реквизиты', callback_data=f'requisites,delete,{num}'))
+    markup.add(types.InlineKeyboardButton(
+        text='Изменить данные', callback_data=f'requisites,change,{num}')
+    )
+    markup.add(types.InlineKeyboardButton(
+        text='Удалить реквизиты', callback_data=f'requisites,delete,{num}')
+    )
     await callback_query.message.answer(string, reply_markup=markup)
     await state.update_data(mess=callback_query.message.message_id)
     await callback_query.answer()
 
 
-@dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,delete'))
-async def handle_requisites_delete_callback(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data.startswith('requisites,delete')
+)
+async def handle_requisites_delete_callback(
+        callback_query: types.CallbackQuery, state: FSMContext
+):
     num = int(callback_query.data.split(',')[2])
 
     db = SingletonClient.get_data_base()
@@ -69,18 +97,25 @@ async def handle_requisites_delete_callback(callback_query: types.CallbackQuery,
     payment_types_list: list = region.get('payment_types')
     payment_types_list.pop(num)
 
-    result = await db.Regions.update_one({'_id': user.get('region')}, {
+    await db.Regions.update_one({'_id': user.get('region')}, {
         "$set": {'payment_types': payment_types_list}
     })
 
     markup = types.InlineKeyboardMarkup()
     for i, requisite in enumerate(payment_types_list):
-        markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
-    markup.add(types.InlineKeyboardButton(text='Добавить реквизиты', callback_data='requisites,add'))
+        markup.add(types.InlineKeyboardButton(
+            text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}')
+        )
+    markup.add(types.InlineKeyboardButton(text='Добавить реквизиты',
+                                          callback_data='requisites,add'))
     data = await state.get_data()
     mess: types.Message.message_id = data['mess']
-    await bot.delete_message(chat_id=callback_query.message.chat.id, message_id=mess)
-    await callback_query.message.edit_text('Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.')
+    await bot.delete_message(chat_id=callback_query.message.chat.id,
+                             message_id=mess)
+    await callback_query.message.edit_text(
+        'Список реквизитов.\n'
+        'Вы можете изменить или удалить существующие или добавить новые.'
+    )
     await callback_query.message.edit_reply_markup(reply_markup=markup)
     await callback_query.answer()
 
@@ -90,9 +125,13 @@ class AddRequisites(StatesGroup):
     numbers = State()
 
 
-@dp.callback_query_handler(lambda callback_query: callback_query.data.startswith('requisites,add') or
-                           callback_query.data.startswith('requisites,change'))
-async def handle_requisites_add_callback(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data.startswith(
+        'requisites,add'
+    ) or callback_query.data.startswith('requisites,change')
+)
+async def handle_requisites_add_callback(callback_query: types.CallbackQuery,
+                                         state: FSMContext):
     await callback_query.message.answer('Введите название банка/кошелька')
     await AddRequisites.title.set()
     await state.update_data(message=callback_query.message.message_id)
@@ -108,7 +147,9 @@ async def handle_requisites_add_callback(callback_query: types.CallbackQuery, st
 async def set_title(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
 
-    await message.answer('Введите номер карты или реквизиты кошелька (До 40 символов)')
+    await message.answer(
+        'Введите номер карты или реквизиты кошелька (До 40 символов)'
+    )
 
     await AddRequisites.numbers.set()
 
@@ -133,7 +174,9 @@ async def set_numbers(message: types.Message, state: FSMContext):
     region = await db.Regions.find_one({
         '_id': user.get('region')
     })
-    payment_types_list = region.get('payment_types') if region.get('payment_types') else []
+    payment_types_list = region.get('payment_types')
+    if not payment_types_list:
+        payment_types_list = []
 
     if type_ == 'add':
         payment_types_list.append([title, numbers])
@@ -141,19 +184,30 @@ async def set_numbers(message: types.Message, state: FSMContext):
         num = int(num)
         payment_types_list[num] = [title, numbers]
 
-    result = await db.Regions.update_one({'_id': user.get('region')}, {
+    await db.Regions.update_one({'_id': user.get('region')}, {
         "$set": {'payment_types': payment_types_list}
     })
 
     await message.answer('Реквизиты были добавлены')
     markup = types.InlineKeyboardMarkup()
     for i, requisite in enumerate(payment_types_list):
-        markup.add(types.InlineKeyboardButton(text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}'))
-    markup.add(types.InlineKeyboardButton(text='Добавить реквизиты', callback_data='requisites,add'))
-    await bot.edit_message_text(text='Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.', message_id=mess, chat_id=message.chat.id)
+        markup.add(types.InlineKeyboardButton(
+            text=f"{requisite[0]}", callback_data=f'requisites,edit,{i}')
+        )
+    markup.add(types.InlineKeyboardButton(text='Добавить реквизиты',
+                                          callback_data='requisites,add'))
+    await bot.edit_message_text(
+        text=('Список реквизитов.\nВы '
+              'можете изменить или удалить существующие или добавить новые.'),
+        message_id=mess,
+        chat_id=message.chat.id
+    )
     # await mess.edit_text(
-    #     'Список реквизитов.\nВы можете изменить или удалить существующие или добавить новые.')
-    await bot.edit_message_reply_markup(reply_markup=markup, message_id=mess, chat_id=message.chat.id)
+    #     'Список реквизитов.\nВы можете изменить или удалить
+    #     существующие или добавить новые.')
+    await bot.edit_message_reply_markup(
+        reply_markup=markup, message_id=mess, chat_id=message.chat.id
+    )
     # await mess.edit_reply_markup(reply_markup=markup)
     if mess_:
         await bot.delete_message(message_id=mess_, chat_id=message.chat.id)

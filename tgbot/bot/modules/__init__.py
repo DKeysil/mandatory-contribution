@@ -1,13 +1,7 @@
-from bot.modules import cancel
+from bot.modules import (cancel, check_contributions, contibutions_list,
+                         get_contribution, requisites, send_contribution,
+                         start)
 
-from bot.modules import start
 
-from bot.modules import send_contribution
-
-from bot.modules import check_contributions
-
-from bot.modules import requisites
-
-from bot.modules import contibutions_list
-
-from bot.modules import get_contribution
+__all__ = ['cancel', 'check_contributions', 'contibutions_list',
+           'get_contribution', 'requisites', 'send_contribution', 'start']

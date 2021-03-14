@@ -1,9 +1,13 @@
-from bot import dp, types, FSMContext
-from motor_client import SingletonClient
-from loguru import logger
 from datetime import datetime
+
+from aiogram import types
+from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from bson import ObjectId
+from loguru import logger
+
+from bot import dp
+from motor_client import SingletonClient
 
 
 class Registration(StatesGroup):
@@ -13,7 +17,8 @@ class Registration(StatesGroup):
     finish = State()
 
 
-@dp.message_handler(lambda message: message.chat.type == 'private', commands=['start'])
+@dp.message_handler(lambda message: message.chat.type == 'private',
+                    commands=['start'])
 async def start(message: types.Message):
     logger.info('command: /start')
     telegram_id = message.from_user.id
@@ -24,8 +29,13 @@ async def start(message: types.Message):
     })
 
     if user:
-        result = await db.Users.update_one({"telegram_id": telegram_id}, {"$set": {"mention": message.from_user.mention}})
-        logger.info(f'user exist. update_one modified count: {result.modified_count}')
+        result = await db.Users.update_one(
+            {"telegram_id": telegram_id},
+            {"$set": {"mention": message.from_user.mention}}
+        )
+        logger.info(
+            f'user exist. update_one modified count: {result.modified_count}'
+        )
         return await message.answer('Вы уже зарегистрированы')
 
     await message.answer('Введите <b>Фамилию Имя</b>')
@@ -45,22 +55,29 @@ async def set_name(message: types.Message, state: FSMContext):
     await state.update_data(mention=message.from_user.mention)
 
     markup = await regions_keyboard()
-    await message.answer('Выберите регион.\n'
-                         'Если вашего региона нет, попросите казначея добавить ваш регион и '
-                         'обновите список регионов командой /refresh.', reply_markup=markup)
+    await message.answer(
+        ('Выберите регион.\n'
+         'Если вашего региона нет, попросите казначея добавить ваш регион и '
+         'обновите список регионов командой /refresh.'),
+        reply_markup=markup
+    )
     await Registration.region.set()
 
 
 @dp.message_handler(commands=['refresh'], state=[Registration.region])
 async def refresh_regions_list(message: types.Message, state: FSMContext):
     markup = await regions_keyboard()
-    await message.answer('Выберите регион.\n'
-                         'Если вашего региона нет, попросите казначея добавить ваш регион и '
-                         'обновите список регионов командой /refresh.', reply_markup=markup)
+    await message.answer(
+        ('Выберите регион.\n'
+         'Если вашего региона нет, попросите казначея добавить ваш регион и '
+         'обновите список регионов командой /refresh.'),
+        reply_markup=markup
+    )
 
 
 @dp.callback_query_handler(state=[Registration.region])
-async def handle_region_callback(callback_query: types.CallbackQuery, state: FSMContext):
+async def handle_region_callback(callback_query: types.CallbackQuery,
+                                 state: FSMContext):
     logger.info(f'Выбор региона {callback_query.data}')
     region_id = ObjectId(callback_query.data)
     db = SingletonClient.get_data_base()
@@ -85,8 +102,12 @@ async def set_federal_region(message: types.Message, state: FSMContext):
     await finish(message, state)
 
 
-@dp.callback_query_handler(lambda callback_query: callback_query.data == 'Accept', state=[Registration.finish])
-async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data == 'Accept',
+    state=[Registration.finish]
+)
+async def accept_callback(callback_query: types.CallbackQuery,
+                          state: FSMContext):
     db = SingletonClient.get_data_base()
     logger.info(f"from {callback_query.from_user.id}")
 
@@ -106,32 +127,45 @@ async def accept_callback(callback_query: types.CallbackQuery, state: FSMContext
                     f'insert_one user in db status: {result.acknowledged}')
 
     await callback_query.message.edit_reply_markup()
-    introduction_string = 'Вы успешно зарегистрировались.\n\n'
-    introduction_string += f"Для отправки взноса воспользуйтесь командой /send\nДля отмены состояния напишите /cancel"
+    introduction_string = ('Вы успешно зарегистрировались.\n\n'
+                           "Для отправки взноса воспользуйтесь командой "
+                           "/send\nДля отмены состояния напишите /cancel")
     await callback_query.message.answer(introduction_string)
     await state.finish()
     await callback_query.answer()
 
 
-@dp.callback_query_handler(lambda callback_query: callback_query.data == 'Restart', state=[Registration.finish])
-async def restart_callback(callback_query: types.CallbackQuery, state: FSMContext):
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data == 'Restart',
+    state=[Registration.finish]
+)
+async def restart_callback(callback_query: types.CallbackQuery,
+                           state: FSMContext):
     await Registration.name.set()
     logger.info(f'Start by: {callback_query.from_user.id}\nrestarted')
-    await callback_query.message.answer('Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.')
+    await callback_query.message.answer(
+        'Попробуем ещё раз.\n\nВведите <b>Фамилию Имя</b>.'
+    )
     await callback_query.answer()
 
 
 async def regions_keyboard() -> types.InlineKeyboardMarkup:
     db = SingletonClient.get_data_base()
     regions = db.Regions.find({})
-    regions = await regions.to_list(length=await db.Regions.count_documents({}))
+    regions = await regions.to_list(
+        length=await db.Regions.count_documents({})
+    )
     logger.info(regions)
     lst = []
     for i in range(len(regions)):
         if i % 3 == 0:
-            lst.append([types.InlineKeyboardButton(text=regions[i]['title'], callback_data=f"{regions[i]['_id']}")])
+            lst.append([types.InlineKeyboardButton(
+                text=regions[i]['title'], callback_data=f"{regions[i]['_id']}"
+            )])
         else:
-            lst[i//3].append(types.InlineKeyboardButton(text=regions[i]['title'], callback_data=f"{regions[i]['_id']}"))
+            lst[i//3].append(types.InlineKeyboardButton(
+                text=regions[i]['title'], callback_data=f"{regions[i]['_id']}"
+            ))
 
     markup = types.InlineKeyboardMarkup()
     for row in lst:
@@ -154,9 +188,11 @@ async def finish(message: types.Message, state: FSMContext):
 def under_event_keyboard():
     markup = types.InlineKeyboardMarkup()
 
-    button = types.InlineKeyboardButton(text="✅ Подтвердить", callback_data='Accept')
+    button = types.InlineKeyboardButton(text="✅ Подтвердить",
+                                        callback_data='Accept')
     markup.add(button)
 
-    button = types.InlineKeyboardButton(text="❌ Начать заново", callback_data='Restart')
+    button = types.InlineKeyboardButton(text="❌ Начать заново",
+                                        callback_data='Restart')
     markup.add(button)
     return markup
