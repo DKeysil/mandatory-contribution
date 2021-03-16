@@ -5,11 +5,11 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from loguru import logger
 
-from bot import dp
-from bot.modules.check_contributions.CheckContributions import (
+from app.bot import dp
+from app.bot.modules.check_contributions.CheckContributions import (
     update_payment_in_db
 )
-from motor_client import SingletonClient
+from app.motor_client import SingletonClient
 
 
 class Send(StatesGroup):

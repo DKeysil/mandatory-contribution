@@ -6,8 +6,9 @@ from aiogram.dispatcher import FSMContext
 from bson import ObjectId
 from loguru import logger
 
-from bot import agcm, bot, dp
-from motor_client import SingletonClient
+from app.bot import bot, dp
+from app.gspread import client as agcm
+from app.motor_client import SingletonClient
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private',

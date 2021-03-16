@@ -1,15 +1,10 @@
-import asyncio
-
-from aiogram import executor
 from loguru import logger
 
-from bot import dp
+from app.bot import start_polling
+from app.tasks import create_cron_tasks
 
 
-if __name__ == "__main__":
-
+if __name__ == '__main__':
     logger.info('Bot is starting.')
-
-    executor.start_polling(
-        dp, loop=asyncio.get_event_loop(), skip_updates=True
-    )
+    create_cron_tasks()
+    start_polling()

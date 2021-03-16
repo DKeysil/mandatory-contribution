@@ -2,11 +2,11 @@ from aiogram import types
 from bson import ObjectId
 from loguru import logger
 
-from bot import dp
-from bot.modules.check_contributions.CheckContributions import (
+from app.bot import dp
+from app.bot.modules.check_contributions.CheckContributions import (
     handle_payment_callback_func
 )
-from motor_client import SingletonClient
+from app.motor_client import SingletonClient
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private',

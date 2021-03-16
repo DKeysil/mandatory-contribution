@@ -2,7 +2,7 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from loguru import logger
 
-from bot import dp
+from app.bot import dp
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private',

@@ -3,11 +3,11 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from loguru import logger
 
-from bot import dp
-from bot.modules.contibutions_list.ContributionsList import (
+from app.bot import dp
+from app.bot.modules.contibutions_list.ContributionsList import (
     payment_string_markup
 )
-from motor_client import SingletonClient
+from app.motor_client import SingletonClient
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private',
