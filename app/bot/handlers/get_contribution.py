@@ -3,16 +3,11 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from loguru import logger
 
-from app.bot import dp
-from app.bot.modules.contibutions_list.ContributionsList import (
-    payment_string_markup
-)
+from app.bot.handlers.contributions_list import payment_string_markup
 from app.motor_client import SingletonClient
 
 
-@dp.message_handler(lambda message: message.chat.type == 'private',
-                    commands=['get'])
-async def get_contribution(message: types.Message):
+async def get_contribution_cmd(message: types.Message):
     logger.info(f'get contribution from {message.from_user.id}')
     db = SingletonClient.get_data_base()
 

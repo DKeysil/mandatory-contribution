@@ -2,24 +2,15 @@ from datetime import datetime
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from bson import ObjectId
 from loguru import logger
 
-from app.bot import dp
+from app.bot.states import Registration
 from app.motor_client import SingletonClient
 
 
-class Registration(StatesGroup):
-    name = State()
-    region = State()
-    federal_region = State()
-    finish = State()
-
-
-@dp.message_handler(lambda message: message.chat.type == 'private',
-                    commands=['start'])
-async def start(message: types.Message):
+async def start_cmd(message: types.Message, state: FSMContext):
+    await state.finish()
     logger.info('command: /start')
     telegram_id = message.from_user.id
     db = SingletonClient.get_data_base()
@@ -42,8 +33,7 @@ async def start(message: types.Message):
     await Registration.name.set()
 
 
-@dp.message_handler(state=[Registration.name])
-async def set_name(message: types.Message, state: FSMContext):
+async def set_name_msg(message: types.Message, state: FSMContext):
     name = message.text.split(' ')
     logger.info(f"Установка имени {name}")
 
@@ -64,8 +54,7 @@ async def set_name(message: types.Message, state: FSMContext):
     await Registration.region.set()
 
 
-@dp.message_handler(commands=['refresh'], state=[Registration.region])
-async def refresh_regions_list(message: types.Message, state: FSMContext):
+async def refresh_regions_list_cmd(message: types.Message, _: FSMContext):
     markup = await regions_keyboard()
     await message.answer(
         ('Выберите регион.\n'
@@ -75,9 +64,8 @@ async def refresh_regions_list(message: types.Message, state: FSMContext):
     )
 
 
-@dp.callback_query_handler(state=[Registration.region])
-async def handle_region_callback(callback_query: types.CallbackQuery,
-                                 state: FSMContext):
+async def handle_region_cb(callback_query: types.CallbackQuery,
+                           state: FSMContext):
     logger.info(f'Выбор региона {callback_query.data}')
     region_id = ObjectId(callback_query.data)
     db = SingletonClient.get_data_base()
@@ -94,20 +82,14 @@ async def handle_region_callback(callback_query: types.CallbackQuery,
     await callback_query.answer()
 
 
-@dp.message_handler(state=[Registration.federal_region])
-async def set_federal_region(message: types.Message, state: FSMContext):
+async def set_federal_region_msg(message: types.Message, state: FSMContext):
     logger.info(f"from {message.from_user.id} federal region {message.text}")
     await state.update_data(federal_region=message.text)
     await message.reply("Принято")
     await finish(message, state)
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data == 'Accept',
-    state=[Registration.finish]
-)
-async def accept_callback(callback_query: types.CallbackQuery,
-                          state: FSMContext):
+async def accept_cb(callback_query: types.CallbackQuery, state: FSMContext):
     db = SingletonClient.get_data_base()
     logger.info(f"from {callback_query.from_user.id}")
 
@@ -135,12 +117,7 @@ async def accept_callback(callback_query: types.CallbackQuery,
     await callback_query.answer()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data == 'Restart',
-    state=[Registration.finish]
-)
-async def restart_callback(callback_query: types.CallbackQuery,
-                           state: FSMContext):
+async def restart_cb(callback_query: types.CallbackQuery, _: FSMContext):
     await Registration.name.set()
     logger.info(f'Start by: {callback_query.from_user.id}\nrestarted')
     await callback_query.message.answer(

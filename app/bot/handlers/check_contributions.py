@@ -2,18 +2,14 @@ import os
 
 import gspread
 from aiogram import types
-from aiogram.dispatcher import FSMContext
 from bson import ObjectId
 from loguru import logger
 
-from app.bot import bot, dp
 from app.gspread import client as agcm
 from app.motor_client import SingletonClient
 
 
-@dp.message_handler(lambda message: message.chat.type == 'private',
-                    commands=['check'])
-async def check(message: types.Message, state: FSMContext):
+async def check_cmd(message: types.Message):
     logger.info('check new payments')
     db = SingletonClient.get_data_base()
 
@@ -82,10 +78,7 @@ async def generate_contribution_string_photo_markup(payment_id: ObjectId):
     return payment.get('file_id'), string, markup
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('payment-')
-)
-async def handle_payment_callback(callback_query: types.CallbackQuery):
+async def handle_payment_cb(callback_query: types.CallbackQuery):
     await handle_payment_callback_func(callback_query)
     db = SingletonClient.get_data_base()
     user = await db.Users.find_one(
@@ -113,6 +106,7 @@ async def handle_payment_callback(callback_query: types.CallbackQuery):
 
 
 async def handle_payment_callback_func(callback_query: types.CallbackQuery):
+    bot = callback_query.bot
     db = SingletonClient.get_data_base()
     payment_id = ObjectId(callback_query.data.split(',')[1])
     payment = await db.Payments.find_one({

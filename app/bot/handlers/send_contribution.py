@@ -2,30 +2,14 @@ from datetime import datetime
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from loguru import logger
 
-from app.bot import dp
-from app.bot.modules.check_contributions.CheckContributions import (
-    update_payment_in_db
-)
+from app.bot.handlers.check_contributions import update_payment_in_db
+from app.bot.states import Send
 from app.motor_client import SingletonClient
 
 
-class Send(StatesGroup):
-    choose_person = State()
-    set_name = State()
-    set_mention = State()
-    set_federal_region = State()
-    payment_platform = State()
-    date = State()
-    image = State()
-    finish = State()
-
-
-@dp.message_handler(lambda message: message.chat.type == 'private',
-                    commands=['send'])
-async def send(message: types.Message, state: FSMContext):
+async def send_cmd(message: types.Message):
     logger.info(f"send from {message.from_user.id}")
     db = SingletonClient.get_data_base()
 
@@ -46,11 +30,8 @@ async def send(message: types.Message, state: FSMContext):
     await Send.choose_person.set()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('send'),
-    state=[Send.choose_person]
-)
-async def set_person(callback_query: types.CallbackQuery, state: FSMContext):
+async def set_person_cb(callback_query: types.CallbackQuery,
+                        state: FSMContext):
     await callback_query.message.edit_reply_markup()
     logger.info(f"from {callback_query.from_user.id}")
     db = SingletonClient.get_data_base()
@@ -81,8 +62,7 @@ async def set_person(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.answer()
 
 
-@dp.message_handler(state=[Send.set_name])
-async def set_name(message: types.Message, state: FSMContext):
+async def set_name_msg(message: types.Message, state: FSMContext):
     name = message.text.split(' ')
     logger.info(f"Установка имени {name} from {message.from_user.id}")
     if len(name) != 2:
@@ -101,8 +81,7 @@ async def set_name(message: types.Message, state: FSMContext):
     )
 
 
-@dp.message_handler(state=[Send.set_mention])
-async def set_mention(message: types.Message, state: FSMContext):
+async def set_mention_msg(message: types.Message, state: FSMContext):
     logger.info(f"set mention from {message.from_user.id}")
     await message.answer("Данные сохранены.",
                          reply_markup=types.ReplyKeyboardRemove())
@@ -124,8 +103,7 @@ async def set_mention(message: types.Message, state: FSMContext):
     await Send.payment_platform.set()
 
 
-@dp.message_handler(state=[Send.set_federal_region])
-async def set_federal_region(message: types.Message, state: FSMContext):
+async def set_federal_region_msg(message: types.Message, state: FSMContext):
     logger.info(f"from {message.from_user.id}")
     await state.update_data(federal_region=message.text)
     await message.reply("Принято")
@@ -160,12 +138,8 @@ async def payment_types_markup(region_id) -> types.InlineKeyboardMarkup:
     return markup
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('rq'),
-    state=[Send.payment_platform]
-)
-async def set_payment_type(callback_query: types.CallbackQuery,
-                           state: FSMContext):
+async def set_payment_type_cb(callback_query: types.CallbackQuery,
+                              state: FSMContext):
     logger.info(f"from {callback_query.from_user.id}")
     await callback_query.message.answer(
         f'Реквизиты: <code>{callback_query.data.split(",")[2]}</code>'
@@ -180,8 +154,7 @@ async def set_payment_type(callback_query: types.CallbackQuery,
     await callback_query.answer()
 
 
-@dp.message_handler(state=[Send.date])
-async def set_payment_date(message: types.Message, state: FSMContext):
+async def set_payment_date_msg(message: types.Message, state: FSMContext):
     date = message.text
     logger.info(f"date {date} from {message.from_user.id}")
     try:
@@ -200,17 +173,14 @@ async def set_payment_date(message: types.Message, state: FSMContext):
     await message.answer('Пришлите скриншот перевода')
 
 
-@dp.message_handler(content_types=types.ContentType.DOCUMENT,
-                    state=[Send.image])
-async def image_document(message: types.Message, state: FSMContext):
+async def image_document_msg(message: types.Message):
     await message.reply(
         "Необходимо прислать сжатое фото. "
         "При отправлении фото нажмите галочку \"Сжать фото\" (Compress images)"
     )
 
 
-@dp.message_handler(content_types=types.ContentType.PHOTO, state=[Send.image])
-async def image_photo(message: types.Message, state: FSMContext):
+async def image_photo_msg(message: types.Message, state: FSMContext):
     file_id = message.photo[0].file_id  # file id фотографии
     await state.update_data(file_id=file_id)
     db = SingletonClient.get_data_base()
@@ -255,11 +225,7 @@ def under_event_keyboard():
     return markup
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data == 'Accept', state=[Send.finish]
-)
-async def accept_callback(callback_query: types.CallbackQuery,
-                          state: FSMContext):
+async def accept_cb(callback_query: types.CallbackQuery, state: FSMContext):
     logger.info(f"from {callback_query.from_user.id}")
     db = SingletonClient.get_data_base()
 
@@ -320,11 +286,7 @@ async def accept_callback(callback_query: types.CallbackQuery,
     await callback_query.answer()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data == 'Cancel', state=[Send.finish]
-)
-async def cancel_callback(callback_query: types.CallbackQuery,
-                          state: FSMContext):
+async def cancel_cb(callback_query: types.CallbackQuery, state: FSMContext):
     await state.finish()
     logger.info(f'Start by: {callback_query.from_user.id}\ncancel')
     await callback_query.message.answer('Отправка взноса была отменена')

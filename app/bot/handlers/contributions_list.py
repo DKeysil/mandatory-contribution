@@ -2,16 +2,11 @@ from aiogram import types
 from bson import ObjectId
 from loguru import logger
 
-from app.bot import dp
-from app.bot.modules.check_contributions.CheckContributions import (
-    handle_payment_callback_func
-)
+from app.bot.handlers.check_contributions import handle_payment_callback_func
 from app.motor_client import SingletonClient
 
 
-@dp.message_handler(lambda message: message.chat.type == 'private',
-                    commands=['list'])
-async def contributions_list(message: types.Message):
+async def contributions_list_cmd(message: types.Message):
     logger.info('check contributions_list')
     db = SingletonClient.get_data_base()
 
@@ -44,12 +39,7 @@ async def contributions_list(message: types.Message):
     await message.answer(string, reply_markup=markup)
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith(
-        'conlist'
-    ) and callback_query.data.endswith('show')
-)
-async def show_list(callback_query: types.CallbackQuery):
+async def show_list_cb(callback_query: types.CallbackQuery):
     db = SingletonClient.get_data_base()
 
     user = await db.Users.find_one(
@@ -108,12 +98,7 @@ async def show_list(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(string, reply_markup=markup)
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.split(
-        ','
-    )[0] == 'conlist' and callback_query.data.split(',')[1] == 'back'
-)
-async def handle_conlist_callback_query(callback_query: types.CallbackQuery):
+async def handle_conlist_cb_back(callback_query: types.CallbackQuery):
     string = 'Выбери список каких платежей вы хотите получить'
 
     markup = types.InlineKeyboardMarkup()
@@ -134,14 +119,7 @@ async def handle_conlist_callback_query(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(string, reply_markup=markup)
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.split(
-        ','
-    )[0] == 'conlist' and callback_query.data.split(',')[1] in ['r', 'l', 'n']
-)
-async def handle_conlist_callback_query_nav(
-        callback_query: types.CallbackQuery
-):
+async def handle_conlist_cb_nav(callback_query: types.CallbackQuery):
     """
     Обработчик нажатия на кнопку под сообщением влево или вправо.
     Лямбда проверяет, чтобы обрабатывалось только y кнопки
@@ -259,10 +237,7 @@ async def handle_conlist_callback_query_string_markup_generator(
     return markup
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('conlist,payment')
-)
-async def handler_payment_callback(callback_query: types.CallbackQuery):
+async def handler_payment_cb(callback_query: types.CallbackQuery):
     logger.info(f'handle conlist payment from {callback_query.from_user.id} '
                 f'data {callback_query.data}')
     data = callback_query.data.split(',')
@@ -319,10 +294,7 @@ async def payment_string_markup(payment, status, page='0'):
     return string, markup
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('conlist,banned')
-)
-async def handler_banned_callback(callback_query: types.CallbackQuery):
+async def handler_banned_cb(callback_query: types.CallbackQuery):
     logger.info(f'handle conlist banned from {callback_query.from_user.id} '
                 f'data {callback_query.data}')
     data = callback_query.data.split(',')
@@ -353,10 +325,7 @@ async def handler_banned_callback(callback_query: types.CallbackQuery):
     await callback_query.answer()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('conlist-unban')
-)
-async def handle_conlist_unban_callback(callback_query: types.CallbackQuery):
+async def handle_conlist_unban_cb(callback_query: types.CallbackQuery):
     user_id = callback_query.data.split(',')[1]
     logger.info(f"unban user {user_id}")
     db = SingletonClient.get_data_base()
@@ -373,10 +342,7 @@ async def handle_conlist_unban_callback(callback_query: types.CallbackQuery):
     await callback_query.answer()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('conlist-')
-)
-async def handle_conlist_callback(callback_query: types.CallbackQuery):
+async def handle_conlist_cb(callback_query: types.CallbackQuery):
     if not callback_query.data.startswith('conlist-back'):
         await handle_payment_callback_func(callback_query)
 
