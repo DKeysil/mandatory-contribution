@@ -2,7 +2,7 @@ version: '3'
 services:
   contribbot:
     build:
-      context: tgbot
+      context: app
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
