@@ -4,10 +4,10 @@ from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.filters import OrFilter
 from aiogram.types import ContentType
 
+from bot import handlers
 from bot.modules import (check_contributions, contributions_list,
                          get_contribution, requisites, send_contribution,
                          start)
-from bot.modules.cancel import cancel_cmd
 
 
 def setup_cq_handlers(dp: Dispatcher) -> None:
@@ -90,8 +90,6 @@ def setup_cmd_handlers(dp: Dispatcher) -> None:
     :return:
     """
     # хендлеры с состояниями
-    dp.register_message_handler(cancel_cmd, commands='cancel', state='*',)
-
     dp.register_message_handler(start.refresh_regions_list_cmd,
                                 commands='refresh',
                                 state=start.Registration.region)
@@ -155,6 +153,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     :param dp:
     :return:
     """
+    handlers.setup_handlers(dp)
     setup_cq_handlers(dp)
     setup_cmd_handlers(dp)
     setup_msg_handlers(dp)
