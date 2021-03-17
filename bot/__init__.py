@@ -9,9 +9,6 @@ from aiogram.dispatcher.handler import CancelHandler
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from oauth2client.service_account import ServiceAccountCredentials
 
-from motor_client import SingletonClient
-
-
 API_TOKEN = os.environ['BOT_API_KEY']
 bot = Bot(token=API_TOKEN, parse_mode='html')
 storage = MongoStorage(host=os.environ['MONGODB_HOSTNAME'],
@@ -62,4 +59,4 @@ dp.middleware.setup(BanMiddleware())
 
 
 from bot import modules
-from tasks import *
+from core.tasks import *

@@ -9,7 +9,7 @@ from bot import dp
 from bot.modules.check_contributions.CheckContributions import (
     update_payment_in_db
 )
-from motor_client import SingletonClient
+from core.motor_client import SingletonClient
 
 
 class Send(StatesGroup):

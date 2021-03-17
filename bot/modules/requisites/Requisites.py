@@ -3,7 +3,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from bot import bot, dp
-from motor_client import SingletonClient
+from core.motor_client import SingletonClient
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private',

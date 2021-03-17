@@ -6,7 +6,7 @@ from bot import dp
 from bot.modules.check_contributions.CheckContributions import (
     handle_payment_callback_func
 )
-from motor_client import SingletonClient
+from core.motor_client import SingletonClient
 
 
 @dp.message_handler(lambda message: message.chat.type == 'private',

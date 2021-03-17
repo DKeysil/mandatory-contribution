@@ -3,7 +3,7 @@ from bson import ObjectId
 from loguru import logger
 
 from bot import bot
-from motor_client import SingletonClient
+from core.motor_client import SingletonClient
 
 
 @aiocron.crontab("0 17 * * *")
