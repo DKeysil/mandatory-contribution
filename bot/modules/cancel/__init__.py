@@ -1,4 +1,4 @@
-from bot.modules.cancel import Cancel
+from bot.modules.cancel.Cancel import cancel_cmd
 
 
-__all__ = ['Cancel']
+__all__ = ['cancel_cmd']

@@ -2,13 +2,10 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from bot import dp
 from core.motor_client import SingletonClient
 
 
-@dp.message_handler(lambda message: message.chat.type == 'private',
-                    commands=['req'])
-async def requisites(message: types.Message, state: FSMContext):
+async def requisites_cmd(message: types.Message):
     # todo: сделать реквизиты листабельными
     db = SingletonClient.get_data_base()
 
@@ -50,11 +47,8 @@ async def requisites(message: types.Message, state: FSMContext):
     )
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('requisites,edit')
-)
-async def handle_requisites_edit_callback(callback_query: types.CallbackQuery,
-                                          state: FSMContext):
+async def handle_requisites_edit_cq(callback_query: types.CallbackQuery,
+                                    state: FSMContext):
     db = SingletonClient.get_data_base()
     user = await db.Users.find_one(
         {'telegram_id': callback_query.from_user.id}
@@ -79,10 +73,7 @@ async def handle_requisites_edit_callback(callback_query: types.CallbackQuery,
     await callback_query.answer()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith('requisites,delete')
-)
-async def handle_requisites_delete_callback(
+async def handle_requisites_delete_cq(
         callback_query: types.CallbackQuery, state: FSMContext
 ):
     bot = callback_query.bot
@@ -126,13 +117,8 @@ class AddRequisites(StatesGroup):
     numbers = State()
 
 
-@dp.callback_query_handler(
-    lambda callback_query: callback_query.data.startswith(
-        'requisites,add'
-    ) or callback_query.data.startswith('requisites,change')
-)
-async def handle_requisites_add_callback(callback_query: types.CallbackQuery,
-                                         state: FSMContext):
+async def handle_requisites_add_cq(callback_query: types.CallbackQuery,
+                                   state: FSMContext):
     await callback_query.message.answer('Введите название банка/кошелька')
     await AddRequisites.title.set()
     await state.update_data(message=callback_query.message.message_id)
@@ -144,8 +130,7 @@ async def handle_requisites_add_callback(callback_query: types.CallbackQuery,
         await callback_query.answer()
 
 
-@dp.message_handler(state=[AddRequisites.title])
-async def set_title(message: types.Message, state: FSMContext):
+async def set_title_msg(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
 
     await message.answer(
@@ -155,8 +140,7 @@ async def set_title(message: types.Message, state: FSMContext):
     await AddRequisites.numbers.set()
 
 
-@dp.message_handler(state=[AddRequisites.numbers])
-async def set_numbers(message: types.Message, state: FSMContext):
+async def set_numbers_msg(message: types.Message, state: FSMContext):
     bot = message.bot
     async with state.proxy() as data:
         title = data['title']
