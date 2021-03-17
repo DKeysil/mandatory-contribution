@@ -2,7 +2,7 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from bot import bot, dp
+from bot import dp
 from core.motor_client import SingletonClient
 
 
@@ -85,6 +85,7 @@ async def handle_requisites_edit_callback(callback_query: types.CallbackQuery,
 async def handle_requisites_delete_callback(
         callback_query: types.CallbackQuery, state: FSMContext
 ):
+    bot = callback_query.bot
     num = int(callback_query.data.split(',')[2])
 
     db = SingletonClient.get_data_base()
@@ -156,6 +157,7 @@ async def set_title(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=[AddRequisites.numbers])
 async def set_numbers(message: types.Message, state: FSMContext):
+    bot = message.bot
     async with state.proxy() as data:
         title = data['title']
         numbers = message.text

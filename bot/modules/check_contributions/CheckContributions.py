@@ -6,7 +6,8 @@ from aiogram.dispatcher import FSMContext
 from bson import ObjectId
 from loguru import logger
 
-from bot import agcm, bot, dp
+from bot import dp
+from core.gspread import client as agcm
 from core.motor_client import SingletonClient
 
 
@@ -112,6 +113,7 @@ async def handle_payment_callback(callback_query: types.CallbackQuery):
 
 
 async def handle_payment_callback_func(callback_query: types.CallbackQuery):
+    bot = callback_query.bot
     db = SingletonClient.get_data_base()
     payment_id = ObjectId(callback_query.data.split(',')[1])
     payment = await db.Payments.find_one({
