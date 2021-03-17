@@ -6,6 +6,17 @@ from aiogram.dispatcher import FSMContext
 from loguru import logger as log
 
 
+async def send_help(msg: types.Message) -> None:
+    """
+    Функция для отправки вспомогательного сообщения.
+    Также используется, как хендлер для команды /help.
+    :param msg:
+    :return:
+    """
+    await msg.answer('Для отправки взноса воспользуйтесь командой /send.\n'
+                     'Для сброса введённых данных отправьте /cancel.')
+
+
 async def cancel(
         obj: Union[types.CallbackQuery, types.Message], state: FSMContext
 ) -> None:
@@ -21,8 +32,12 @@ async def cancel(
     if not current_state:
         return
     user = obj.from_user
+    msg = obj
+    if isinstance(obj, types.CallbackQuery):
+        msg = obj.message
     log.debug('Cancel state for user %s (%d)', user.mention, user.id)
     await state.finish()
+    await msg.answer('Ввод данных сброшен.')
 
 
 def setup_handlers(dp: Dispatcher) -> None:
@@ -34,3 +49,5 @@ def setup_handlers(dp: Dispatcher) -> None:
     :return:
     """
     dp.register_message_handler(cancel, commands='cancel', state='*')
+
+    dp.register_message_handler(help, commands='help')
