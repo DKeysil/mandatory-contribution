@@ -4,10 +4,9 @@ from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.filters import OrFilter
 from aiogram.types import ContentType
 
-from bot import handlers
+from bot import handlers, users
 from bot.modules import (check_contributions, contributions_list,
-                         get_contribution, requisites, send_contribution,
-                         start)
+                         get_contribution, requisites, send_contribution)
 
 
 def setup_cq_handlers(dp: Dispatcher) -> None:
@@ -35,15 +34,6 @@ def setup_cq_handlers(dp: Dispatcher) -> None:
     dp.register_callback_query_handler(send_contribution.cancel_cq,
                                        state=send_contribution.Send.finish,
                                        text='Cancel')
-
-    dp.register_callback_query_handler(start.handle_region_cq,
-                                       state=start.Registration.region)
-    dp.register_callback_query_handler(start.accept_cq,
-                                       state=start.Registration.finish,
-                                       text='Accept')
-    dp.register_callback_query_handler(start.restart_cq,
-                                       state=start.Registration.finish,
-                                       text='Restart')
 
     # хендлеры без состояний
     dp.register_callback_query_handler(check_contributions.handle_payment_cq,
@@ -84,17 +74,9 @@ def setup_cq_handlers(dp: Dispatcher) -> None:
 def setup_cmd_handlers(dp: Dispatcher) -> None:
     """
     Установка хенделров комманд.
-
-    Хендлеры с состояниями должны быть выше остальных.
     :param dp:
     :return:
     """
-    # хендлеры с состояниями
-    dp.register_message_handler(start.refresh_regions_list_cmd,
-                                commands='refresh',
-                                state=start.Registration.region)
-
-    # хенделеры без состояний
     dp.register_message_handler(check_contributions.check_cmd,
                                 commands='check')
 
@@ -107,8 +89,6 @@ def setup_cmd_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(requisites.requisites_cmd, commands='req')
 
     dp.register_message_handler(send_contribution.send_cmd, commands='send')
-
-    dp.register_message_handler(start.start_cmd, commands='start')
 
 
 def setup_msg_handlers(dp: Dispatcher) -> None:
@@ -141,11 +121,6 @@ def setup_msg_handlers(dp: Dispatcher) -> None:
                                 content_types=ContentType.PHOTO,
                                 state=send_contribution.Send.image)
 
-    dp.register_message_handler(start.set_name_msg,
-                                state=start.Registration.name)
-    dp.register_message_handler(start.set_federal_region_msg,
-                                state=start.Registration.federal_region)
-
 
 def setup_handlers(dp: Dispatcher) -> None:
     """
@@ -154,6 +129,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     :return:
     """
     handlers.setup_handlers(dp)
+    users.setup_handlers(dp)
     setup_cq_handlers(dp)
     setup_cmd_handlers(dp)
     setup_msg_handlers(dp)

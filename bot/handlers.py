@@ -5,6 +5,20 @@ from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 from loguru import logger as log
 
+from bot.users.filters import UserRegistered
+
+
+async def start_cmd(msg: types.Message, state: FSMContext) -> None:
+    """
+    Хендлер срабатывает, когда введена команда /start, но пользователь
+    уже зарегистрирован.
+    :param msg:
+    :param state:
+    :return:
+    """
+    await cancel(msg, state)
+    await send_help(msg)
+
 
 async def send_help(msg: types.Message) -> None:
     """
@@ -48,6 +62,9 @@ def setup_handlers(dp: Dispatcher) -> None:
     :param dp:
     :return:
     """
+    dp.register_message_handler(start_cmd, UserRegistered(),
+                                commands='start',
+                                state='*')
     dp.register_message_handler(cancel, commands='cancel', state='*')
 
     dp.register_message_handler(help, commands='help')

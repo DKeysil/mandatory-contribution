@@ -1,5 +1,6 @@
 aiocron==1.4
 aiogram==2.11.2
+aiogram_dialog>=0.11.1
 aiohttp==3.7.3
 async-timeout==3.0.1
 attrs==20.3.0
