@@ -32,7 +32,7 @@ def create_bot_and_dispatcher() -> Dispatcher:
 
     setup_middlewares(dp)
     setup_filters(dp)
-    setup_dialogs()
+    setup_dialogs(dp)
     setup_handlers(dp)
 
     return dp
