@@ -38,32 +38,33 @@ class RegionButtonGroup(Group):
 
 
 async def get_data(dialog_manager: DialogManager, **_) -> Dict[str, Any]:
-    keys = ('first_name', 'second_name', 'region_id', 'region_title')
-    result = {}
-    for key in keys:
-        result.update({key: dialog_manager.context.data(key)})
+    keys = ('first_name', 'last_name', 'region_id', 'region_title')
+    data = {k: dialog_manager.context.data(k, None) for k in keys}
     federal_region = dialog_manager.context.data('federal_region', None)
     if federal_region:
-        result.update({'federal_region': federal_region})
-    result['region_id'] = ObjectId(result['region_id'])
-    return result
+        data.update({'federal_region': federal_region})
+    data['region_id'] = ObjectId(data['region_id'])
+    return data
 
 
 async def input_name(
         msg: types.Message, dialog: Dialog, manager: DialogManager
 ) -> None:
+    if not msg.text:
+        await msg.answer('Некорректные имя и фамилия. Попробуйте ещё раз.')
+        return
     name = msg.text.split(' ')
     if len(name) != 2:
         await dialog.switch_to(Registration.name, manager)
         return
     manager.context.set_data('first_name', name[0])
-    manager.context.set_data('second_name', name[1])
+    manager.context.set_data('last_name', name[1])
     await wrap_regions_to_buttons()
     await dialog.next(manager)
 
 
 async def refresh_regions(msg: types.Message, *_) -> None:
-    if not msg.text == '/refresh':
+    if not msg.text or msg.text != '/refresh':
         return
     await wrap_regions_to_buttons()
 
@@ -94,7 +95,7 @@ async def accept_finish(
     data = await get_data(manager)
     data.update({'region': data.pop('region_id')})
     data.pop('region_title')
-    await create_user(tg_id=cq.from_user.id, mention=cq.from_user.mention,
+    await create_user(tg_id=cq.from_user.id, tg_username=cq.from_user.username,
                       **data)
 
     await cq.message.edit_text(
@@ -123,7 +124,7 @@ reg_dialog = Dialog(
         Const('Если вашего региона нет, попросите казначея его добавить и '
               'обновите список командой /refresh.'),
         MessageInput(refresh_regions),
-        RegionButtonGroup('', keep_rows=False, width=3),
+        RegionButtonGroup(keep_rows=False, width=3),
         state=Registration.region
     ),
     Window(
