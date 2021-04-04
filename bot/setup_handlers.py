@@ -2,41 +2,19 @@
 from aiogram import Dispatcher
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.filters import OrFilter
-from aiogram.types import ContentType
 
-from bot import handlers, users
-from bot.modules import (check_contributions, contributions_list,
-                         get_contribution, requisites, send_contribution)
+from bot import handlers, payments, users
+from bot.modules import (contributions, contributions_list,
+                         get_contribution, requisites)
 
 
 def setup_cq_handlers(dp: Dispatcher) -> None:
     """
     Установка хендлеров callback'ов.
-
-    Хендлеры с состояниями должны быть выше остальных.
     :param dp:
     :return:
     """
-    # хендлеры с состояниями
-    dp.register_callback_query_handler(
-        send_contribution.set_person_cq,
-        state=send_contribution.Send.choose_person,
-        text_startswith='send'
-    )
-    dp.register_callback_query_handler(
-        send_contribution.set_payment_type_cq,
-        state=send_contribution.Send.payment_platform,
-        text_startswith='rq'
-    )
-    dp.register_callback_query_handler(send_contribution.accept_cq,
-                                       state=send_contribution.Send.finish,
-                                       text='Accept')
-    dp.register_callback_query_handler(send_contribution.cancel_cq,
-                                       state=send_contribution.Send.finish,
-                                       text='Cancel')
-
-    # хендлеры без состояний
-    dp.register_callback_query_handler(check_contributions.handle_payment_cq,
+    dp.register_callback_query_handler(payments.handle_payment_cq,
                                        text_startswith='payment-')
 
     dp.register_callback_query_handler(contributions_list.show_list_cq,
@@ -77,7 +55,7 @@ def setup_cmd_handlers(dp: Dispatcher) -> None:
     :param dp:
     :return:
     """
-    dp.register_message_handler(check_contributions.check_cmd,
+    dp.register_message_handler(contributions.check_cmd,
                                 commands='check')
 
     dp.register_message_handler(contributions_list.contributions_list_cmd,
@@ -88,14 +66,10 @@ def setup_cmd_handlers(dp: Dispatcher) -> None:
 
     dp.register_message_handler(requisites.requisites_cmd, commands='req')
 
-    dp.register_message_handler(send_contribution.send_cmd, commands='send')
-
 
 def setup_msg_handlers(dp: Dispatcher) -> None:
     """
     Установка хендлеров обычных сообщений.
-
-    Хендлеры с сотояниями должны быть выше остальных.
     :param dp:
     :return:
     """
@@ -103,23 +77,6 @@ def setup_msg_handlers(dp: Dispatcher) -> None:
                                 state=requisites.AddRequisites.title)
     dp.register_message_handler(requisites.set_numbers_msg,
                                 state=requisites.AddRequisites.numbers)
-
-    dp.register_message_handler(send_contribution.set_name_msg,
-                                state=send_contribution.Send.set_name)
-    dp.register_message_handler(send_contribution.set_mention_msg,
-                                state=send_contribution.Send.set_mention)
-    dp.register_message_handler(
-        send_contribution.set_federal_region_msg,
-        state=send_contribution.Send.set_federal_region
-    )
-    dp.register_message_handler(send_contribution.set_payment_date_msg,
-                                state=send_contribution.Send.date)
-    dp.register_message_handler(send_contribution.image_document_msg,
-                                content_types=ContentType.DOCUMENT,
-                                state=send_contribution.Send.image)
-    dp.register_message_handler(send_contribution.image_photo_msg,
-                                content_types=ContentType.PHOTO,
-                                state=send_contribution.Send.image)
 
 
 def setup_handlers(dp: Dispatcher) -> None:
@@ -130,6 +87,7 @@ def setup_handlers(dp: Dispatcher) -> None:
     """
     handlers.setup_handlers(dp)
     users.setup_handlers(dp)
+    payments.setup_handlers(dp)
     setup_cq_handlers(dp)
     setup_cmd_handlers(dp)
     setup_msg_handlers(dp)

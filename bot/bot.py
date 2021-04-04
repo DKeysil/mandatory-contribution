@@ -1,7 +1,7 @@
 from aiogram import Dispatcher
 
 from bot import middlewares as mws
-from bot import users
+from bot import payments, users
 from bot.setup_handlers import setup_handlers
 from core import settings as cfg
 
@@ -20,6 +20,7 @@ def setup_dialogs(dp: Dispatcher) -> None:
     registry = DialogRegistry(dp)
 
     registry.register(users.reg_dialog)
+    registry.register(payments.send_dialog)
 
 
 def create_bot_and_dispatcher() -> Dispatcher:
