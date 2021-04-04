@@ -54,6 +54,10 @@ async def cancel(
     await msg.answer('Ввод данных сброшен.')
 
 
+async def id_cmd(msg: types.Message) -> None:
+    await msg.answer(f'Ваш Telegram ID: <code>{msg.from_user.id}</code>')
+
+
 def setup_handlers(dp: Dispatcher) -> None:
     """
     Регистрация хендлеров бота.
@@ -67,4 +71,5 @@ def setup_handlers(dp: Dispatcher) -> None:
                                 state='*')
     dp.register_message_handler(cancel, commands='cancel', state='*')
 
-    dp.register_message_handler(help, commands='help')
+    dp.register_message_handler(send_help, commands='help')
+    dp.register_message_handler(id_cmd, commands='id')
