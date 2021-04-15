@@ -8,6 +8,7 @@ from aiogram.dispatcher.webhook import (BOT_DISPATCHER_KEY,
 from aiohttp import web
 
 from bot.config import Config
+from bot.healthcheck import healthcheck
 from core import Database
 
 
@@ -37,6 +38,8 @@ def create_app(cfg: Config) -> web.Application:
     app = get_new_configured_app(dp, '/' + cfg.BOT_WH_PATH.strip('/'))
 
     app['config'] = cfg
+
+    app.router.add_route('GET', '/healthcheck', healthcheck)
 
     app.on_startup.append(on_startup)
     app.on_cleanup.append(on_cleanup)
