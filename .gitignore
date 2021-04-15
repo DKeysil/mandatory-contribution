@@ -1,9 +1,4 @@
 .*
 !.gitignore
-
-mongodb
 __pycache__
 venv
-docker-compose.creds.yml
-
-service_account_credentials.json
