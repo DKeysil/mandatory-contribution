@@ -9,6 +9,7 @@ from core.db import Database
 
 @pytest.fixture
 async def db() -> Iterator[motor.AsyncIOMotorDatabase]:
-    Database.init(os.environ['MONGO_URI'], os.environ['MONGO_DB'])
-    yield Database.get_database()
-    await Database.get_client().drop_database(os.environ['MONGO_DB'])
+    Database.init(os.environ['MONGO_URI'])
+    db = Database.get_database()
+    yield db
+    await db.client.drop_database(db.name)

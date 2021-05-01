@@ -26,9 +26,7 @@ def register_handlers(dp: Dispatcher) -> None:
 
 def create_dp(cfg: Config) -> Dispatcher:
     bot = Bot(cfg.BOT_TOKEN, parse_mode='html')
-    storage = MongoStorage(cfg.MONGO_HOST, cfg.MONGO_PORT, cfg.MONGO_DATABASE,
-                           username=cfg.MONGO_USER,
-                           password=cfg.MONGO_PASSWORD)
+    storage = MongoStorage(uri=cfg.MONGO_URI, db_name=cfg.MONGO_DATABASE)
     dp = Dispatcher(bot, storage=storage)
     return dp
 
@@ -51,8 +49,7 @@ async def on_startup(app: web.Application) -> None:
     dp: Dispatcher = app[BOT_DISPATCHER_KEY]
     cfg: Config = app['config']
 
-    await Database.init_with_client_getter(dp.storage.get_client,
-                                           cfg.MONGO_DATABASE)
+    await Database.init_with_database_getter(dp.storage.get_db)
 
     await dp.bot.set_webhook(f'{cfg.BOT_DOMAIN}/{cfg.BOT_WH_PATH.strip("/")}')
 
@@ -84,42 +81,24 @@ async def on_cleanup(app: web.Application) -> None:
           'By default, a string of random characters is generated.')
 )
 @click.option(
-    '--mongo-host',
-    metavar='HOST', type=str, envvar='MONGO_HOST',
-    help='Mongo database host. Default value is "localhost".'
-)
-@click.option(
-    '--mongo-port',
-    metavar='PORT', type=int, envvar='MONGO_PORT',
-    help='Mongo database port. Default value is 27017.'
+    '--mongo-uri',
+    metavar='URI', type=str, envvar='MONGO_URI',
+    help='Mongo database URI.'
 )
 @click.option(
     '--mongo-database',
     metavar='NAME', type=str, envvar='MONGO_DATABASE',
     help='Name of mongo database.'
 )
-@click.option(
-    '--mongo-user',
-    metavar='USERNAME', type=str, envvar='MONGO_USER',
-    help='Username for access to mongo database.'
-)
-@click.option(
-    '--mongo-password',
-    metavar='PASSWORD', type=str, envvar='MONGO_PASSWORD',
-    help='Password for access to mongo database.'
-)
 def main(
         bot_token: str, bot_domain: str, bot_wh_path: Optional[str],
-        mongo_host: str, mongo_port: int, mongo_database: str,
-        mongo_user: str, mongo_password: str
+        mongo_uri: str, mongo_database: str
 ) -> None:
-    kwargs = {'MONGO_HOST': mongo_host,
-              'MONGO_PORT': mongo_port,
-              'BOT_WH_PATH': bot_wh_path}
+    kwargs = {'BOT_WH_PATH': bot_wh_path}
     kwargs = {k: v for k, v in kwargs.items() if v}
     cfg = Config(
         bot_token, bot_domain,
-        mongo_database, mongo_user, mongo_password,
+        mongo_uri, mongo_database,
         **kwargs
     )
     app = create_app(cfg)

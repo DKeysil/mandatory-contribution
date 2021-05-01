@@ -5,38 +5,28 @@ from motor import motor_asyncio as motor
 
 
 class Database:
-    _client: motor.AsyncIOMotorClient = None
-    _db: str = None
+    _db: motor.AsyncIOMotorDatabase = None
 
     @classmethod
-    def init(cls, uri: str, database: str) -> None:
-        cls._client = motor.AsyncIOMotorClient(uri)
+    def init(cls, uri: str) -> None:
+        cls._db = motor.AsyncIOMotorClient(uri).get_default_database()
+
+    @classmethod
+    def init_with_database(cls, database: motor.AsyncIOMotorDatabase) -> None:
         cls._db = database
 
     @classmethod
-    def init_with_client(
-            cls, client: motor.AsyncIOMotorClient, database: str
-    ) -> None:
-        cls._client = client
-        cls._db = database
-
-    @classmethod
-    async def init_with_client_getter(
+    async def init_with_database_getter(
             cls,
-            getter: Callable[[], Awaitable[motor.AsyncIOMotorClient]],
-            database: str
+            getter: Callable[[], Awaitable[motor.AsyncIOMotorDatabase]]
     ) -> None:
-        cls.init_with_client(await getter(), database)
-
-    @classmethod
-    def get_client(cls) -> motor.AsyncIOMotorClient:
-        return cls._client
+        cls.init_with_database(await getter())
 
     @classmethod
     def get_database(cls) -> motor.AsyncIOMotorDatabase:
-        return cls.get_client()[cls._db]
+        return cls._db
 
     @classmethod
     def close(cls) -> None:
-        if cls._client:
-            cls._client.close()
+        if cls._db:
+            cls._db.client.close()

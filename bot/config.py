@@ -15,9 +15,6 @@ def _generate_random_str(length: int) -> str:
 class Config:
     BOT_TOKEN: str
     BOT_DOMAIN: str
+    MONGO_URI: str
     MONGO_DATABASE: str
-    MONGO_USER: str
-    MONGO_PASSWORD: str
-    MONGO_HOST: str = 'localhost'
-    MONGO_PORT: int = 27017
     BOT_WH_PATH: str = _generate_random_str(12)
