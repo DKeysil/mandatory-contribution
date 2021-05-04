@@ -44,18 +44,27 @@ def register_handlers(dp: Dispatcher) -> None:
 
 
 async def start_cmd(msg: types.Message, state: FSMContext):
+    """
+    Хендлер команды /start, когда пользователь не зарегистрирован.
+    """
     await state.finish()
     await msg.answer(START_MSG)
     await Registration.name.set()
 
 
 async def start_cq(cq: types.CallbackQuery, state: FSMContext):
+    """
+    Хендлер callback'а start, когда пользователь не зарегистрирован.
+    """
     await state.finish()
     await cq.message.edit_text(START_MSG)
     await Registration.name.set()
 
 
 async def parse_name(msg: types.Message, state: FSMContext):
+    """
+    Хендлер сообщения с состоянием Registration.name.
+    """
     try:
         last_name, first_name = msg.text.title().split(' ')
     except ValueError:
@@ -71,6 +80,10 @@ async def parse_name(msg: types.Message, state: FSMContext):
 
 
 async def get_region_list(bot: Bot) -> str:
+    """
+    Получение списка регионов из БД и преобразование их в строку ссылок
+    с дип линками для отображения в сообщении.
+    """
     bot_username = (await bot.me).username
     return '\n'.join([f'<a href="t.me/{bot_username}?start=region-'
                       f'{region["_id"]}">{region["title"]}</a>'
@@ -78,6 +91,9 @@ async def get_region_list(bot: Bot) -> str:
 
 
 async def refresh_regions(cq: types.CallbackQuery):
+    """
+    Хендлер callback'а refresh с состоянием Registration.region.
+    """
     text = CHOOSE_REGION_MSG + await get_region_list(cq.bot)
     rm = cq.message.reply_markup
     await cq.message.edit_text(text, reply_markup=rm)
@@ -85,6 +101,9 @@ async def refresh_regions(cq: types.CallbackQuery):
 
 
 async def parse_region(msg: types.Message, state: FSMContext):
+    """
+    Хендлер дип линка с состоянием Registration.region.
+    """
     try:
         region_id = int(msg.text.split(' ')[1].split('-')[1])
     except (IndexError, ValueError):
@@ -102,6 +121,9 @@ async def parse_region(msg: types.Message, state: FSMContext):
 
 
 async def parse_refined_region(msg: types.Message, state: FSMContext):
+    """
+    Хендлер сообщения с состоянием Registration.refined_region.
+    """
     await state.update_data({'refined_region': msg.text.title()})
     await finish(msg, state)
 
@@ -124,6 +146,9 @@ async def finish(msg: types.Message, state: FSMContext):
 
 
 async def create_user(cq: types.CallbackQuery, state: FSMContext):
+    """
+    Хендлер callback'а accept с состоянием Registration.finish.
+    """
     data = await state.get_data()
     data.pop('region_title')
     data.update({'tg_id': int(cq.from_user.id),
