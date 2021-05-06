@@ -5,29 +5,35 @@ from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.mongo import MongoStorage
 from aiogram.dispatcher.webhook import (BOT_DISPATCHER_KEY,
                                         get_new_configured_app)
+from aiogram.types import BotCommand
 from aiohttp import web
 
+from bot import handlers, users
 from bot.config import Config
 from bot.healthcheck import healthcheck
 from core import Database
 
 
 def setup_middlewares(dp: Dispatcher) -> None:
-    pass
+    dp.setup_middleware(users.middlewares.BanMiddleware())
 
 
-def setup_filters(dp: Dispatcher) -> None:
-    pass
+def bind_filters(dp: Dispatcher) -> None:
+    dp.bind_filter(users.filters.UserRegistered)
 
 
 def register_handlers(dp: Dispatcher) -> None:
-    pass
+    handlers.register_handlers(dp)
+    users.registration.register_handlers(dp)
 
 
 def create_dp(cfg: Config) -> Dispatcher:
     bot = Bot(cfg.BOT_TOKEN, parse_mode='html')
     storage = MongoStorage(uri=cfg.MONGO_URI, db_name=cfg.MONGO_DATABASE)
     dp = Dispatcher(bot, storage=storage)
+    setup_middlewares(dp)
+    bind_filters(dp)
+    register_handlers(dp)
     return dp
 
 
@@ -52,6 +58,8 @@ async def on_startup(app: web.Application) -> None:
     await Database.init_with_database_getter(dp.storage.get_db)
 
     await dp.bot.set_webhook(f'{cfg.BOT_DOMAIN}/{cfg.BOT_WH_PATH.strip("/")}')
+    await dp.bot.set_my_commands([BotCommand('help', 'Помощь'),
+                                  BotCommand('send', 'Отправить взнос')])
 
 
 async def on_cleanup(app: web.Application) -> None:
