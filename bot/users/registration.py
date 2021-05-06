@@ -71,7 +71,7 @@ async def parse_name(msg: types.Message, state: FSMContext):
         await msg.answer(INCORRECT_NAME_MSG)
         return
     await state.update_data({'first_name': first_name, 'last_name': last_name})
-    text = CHOOSE_REGION_MSG + await get_region_list(msg.bot)
+    text = CHOOSE_REGION_MSG + await _get_region_list(msg.bot)
     rm = types.InlineKeyboardMarkup(inline_keyboard=[[
         types.InlineKeyboardButton('Обновить список', callback_data='refresh')
     ]])
@@ -79,7 +79,7 @@ async def parse_name(msg: types.Message, state: FSMContext):
     await Registration.region.set()
 
 
-async def get_region_list(bot: Bot) -> str:
+async def _get_region_list(bot: Bot) -> str:
     """
     Получение списка регионов из БД и преобразование их в строку ссылок
     с дип линками для отображения в сообщении.
@@ -94,7 +94,7 @@ async def refresh_regions(cq: types.CallbackQuery):
     """
     Хендлер callback'а refresh с состоянием Registration.region.
     """
-    text = CHOOSE_REGION_MSG + await get_region_list(cq.bot)
+    text = CHOOSE_REGION_MSG + await _get_region_list(cq.bot)
     rm = cq.message.reply_markup
     await cq.message.edit_text(text, reply_markup=rm)
     await cq.answer('Список регионов обновлён.')
@@ -117,7 +117,7 @@ async def parse_region(msg: types.Message, state: FSMContext):
         await msg.answer(INPUT_REFINED_REGION_MSG)
         await Registration.refined_region.set()
         return
-    await finish(msg, state)
+    await _finish(msg, state)
 
 
 async def parse_refined_region(msg: types.Message, state: FSMContext):
@@ -125,10 +125,10 @@ async def parse_refined_region(msg: types.Message, state: FSMContext):
     Хендлер сообщения с состоянием Registration.refined_region.
     """
     await state.update_data({'refined_region': msg.text.title()})
-    await finish(msg, state)
+    await _finish(msg, state)
 
 
-async def finish(msg: types.Message, state: FSMContext):
+async def _finish(msg: types.Message, state: FSMContext):
     data = await state.get_data()
     if data.get('refined_region'):
         data.update({'region_title': data['refined_region']})
